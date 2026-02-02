@@ -76,13 +76,32 @@ enum ToolType: String, Codable, CaseIterable {
 // MARK: - Resources
 
 enum ResourceType: String, Codable, CaseIterable {
+    // general
     case wood
     case metalScrap
     case cloth
     case oil
+
+    // fishing resources
     case commonFish
     case rareFish
     case rainbowFish
+    case driftwood
+    case seaweed
+    case rustyCoin
+    case sharkTooth
+    case scale
+    case brokenWheel
+    case wire
+    case plastic
+    case sailorsJournal
+    case platinumScraps
+    case messageInBottle
+    case theOldOne
+    case timeLocket
+    case moonFragment
+    case sunFragment
+    case leatherScrap
 
     var displayName: String {
         switch self {
@@ -90,9 +109,25 @@ enum ResourceType: String, Codable, CaseIterable {
         case .metalScrap: return "Metal Scrap"
         case .cloth: return "Cloth"
         case .oil: return "Oil"
-        case .commonFish: return "Common Fish"
+        case .commonFish: return "Fish"
         case .rareFish: return "Rare Fish"
         case .rainbowFish: return "Rainbow Fish"
+        case .driftwood: return "Driftwood"
+        case .seaweed: return "Seaweed"
+        case .rustyCoin: return "Rusty Coin"
+        case .sharkTooth: return "Shark Tooth"
+        case .scale: return "Scale"
+        case .brokenWheel: return "Broken Wheel"
+        case .wire: return "Wire"
+        case .plastic: return "Plastic"
+        case .sailorsJournal: return "Sailor's Journal"
+        case .platinumScraps: return "Platinum Scraps"
+        case .messageInBottle: return "Message in a Bottle"
+        case .theOldOne: return "The Old One"
+        case .timeLocket: return "Time Locket"
+        case .moonFragment: return "Moon Fragment"
+        case .sunFragment: return "Sun Fragment"
+        case .leatherScrap: return "Leather Scrap"
         }
     }
 
@@ -105,6 +140,22 @@ enum ResourceType: String, Codable, CaseIterable {
         case .commonFish: return "fish"
         case .rareFish: return "fish.fill"
         case .rainbowFish: return "sparkles"
+        case .driftwood: return "leaf.arrow.triangle.circlepath"
+        case .seaweed: return "leaf"
+        case .rustyCoin: return "centsign.circle"
+        case .sharkTooth: return "arrowtriangle.up.fill"
+        case .scale: return "scalemass"
+        case .brokenWheel: return "circle.dashed"
+        case .wire: return "cable.connector"
+        case .plastic: return "cube"
+        case .sailorsJournal: return "book.closed"
+        case .platinumScraps: return "diamond"
+        case .messageInBottle: return "envelope"
+        case .theOldOne: return "fish.circle.fill"
+        case .timeLocket: return "clock"
+        case .moonFragment: return "moon.fill"
+        case .sunFragment: return "sun.max.fill"
+        case .leatherScrap: return "rectangle.fill"
         }
     }
 
@@ -112,10 +163,14 @@ enum ResourceType: String, Codable, CaseIterable {
 
     var rarity: ItemRarity {
         switch self {
-        case .wood, .cloth: return .common
-        case .metalScrap, .oil, .commonFish: return .uncommon
-        case .rareFish: return .rare
-        case .rainbowFish: return .epic
+        case .wood, .cloth, .driftwood, .seaweed, .leatherScrap:
+            return .common
+        case .metalScrap, .oil, .commonFish, .rustyCoin, .sharkTooth, .scale, .brokenWheel, .wire, .plastic:
+            return .uncommon
+        case .rareFish, .sailorsJournal, .platinumScraps:
+            return .rare
+        case .rainbowFish, .messageInBottle, .theOldOne, .timeLocket, .moonFragment, .sunFragment:
+            return .epic
         }
     }
 }
@@ -210,9 +265,9 @@ enum ArmorSlotType: String, Codable, CaseIterable {
 
     var iconName: String {
         switch self {
-        case .hat: return "head.profile.arrow.forward.and.visionpro"
+        case .hat: return "hat.widebrim"
         case .shirt: return "tshirt"
-        case .pants: return "figure.stand"
+        case .pants: return "figure.walk"
         case .boots: return "shoe"
         }
     }

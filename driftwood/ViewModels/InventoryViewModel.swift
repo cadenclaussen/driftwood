@@ -154,12 +154,12 @@ class InventoryViewModel: ObservableObject {
 
     // MARK: - Use Meal
 
-    func useMeal(at index: Int, player: inout Player) {
+    func useMeal(at index: Int, player: inout Player, effectiveMaxHealth: Int) {
         guard index >= 0 && index < Inventory.mealSlotCount else { return }
         guard let content = inventory.collectibles[index].content else { return }
 
         if case .meal(_, let healAmount, let tempHearts) = content {
-            player.health = min(player.health + healAmount, player.maxHealth)
+            player.health = min(player.health + healAmount, effectiveMaxHealth)
             // temp hearts would be handled separately
             _ = tempHearts // placeholder for future temp heart system
             inventory.collectibles[index].clear()

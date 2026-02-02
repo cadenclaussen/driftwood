@@ -9,9 +9,11 @@ struct GameView: View {
     @StateObject private var viewModel: GameViewModel
 
     private let tileSize: CGFloat = 24
+    private let onReturnToMainMenu: () -> Void
 
-    init(profile: SaveProfile) {
+    init(profile: SaveProfile, onReturnToMainMenu: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel(profile: profile))
+        self.onReturnToMainMenu = onReturnToMainMenu
     }
 
     var body: some View {
@@ -52,9 +54,60 @@ struct GameView: View {
                         onUseMeal: { index in viewModel.useMeal(at: index) }
                     )
                 }
+
+                if viewModel.isDead {
+                    DeathScreenView(
+                        onMainMenu: { viewModel.returnToMainMenu() },
+                        onRespawn: { viewModel.respawn() }
+                    )
+                }
+
+                // tool quick menu overlay
+                if viewModel.isToolMenuOpen {
+                    ToolQuickMenuView(
+                        tools: viewModel.ownedTools(),
+                        currentTool: viewModel.player.equippedTool,
+                        onSelect: { tool in viewModel.equipTool(tool) },
+                        onDismiss: { viewModel.closeToolMenu() }
+                    )
+                }
+
+                // fishing minigame overlay
+                if viewModel.isFishing, let fishingVM = viewModel.fishingViewModel, !viewModel.showingFishingResults {
+                    FishingMinigameView(
+                        viewModel: fishingVM,
+                        onComplete: { viewModel.endFishing() }
+                    )
+                }
+
+                // fishing results overlay
+                if viewModel.showingFishingResults, let fishingVM = viewModel.fishingViewModel {
+                    FishingResultsView(
+                        catches: fishingVM.sessionCatches,
+                        leveledUp: fishingVM.fishingState.fishingLevel > viewModel.fishingState.fishingLevel,
+                        newLevel: fishingVM.fishingState.fishingLevel,
+                        onDismiss: { viewModel.dismissFishingResults() }
+                    )
+                }
+
+                // level up notification
+                VStack {
+                    Spacer()
+                        .frame(height: 80)
+                    LevelUpNotificationView(
+                        level: viewModel.levelUpNotificationLevel,
+                        isVisible: viewModel.showLevelUpNotification
+                    )
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
             }
         }
-        .onAppear { viewModel.startGameLoop() }
+        .onAppear {
+            viewModel.onReturnToMainMenu = onReturnToMainMenu
+            viewModel.startGameLoop()
+        }
         .onDisappear { viewModel.stopGameLoop() }
     }
 
@@ -84,7 +137,7 @@ struct GameView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HeartsView(
                         health: viewModel.player.health,
-                        maxHealth: viewModel.player.maxHealth
+                        maxHealth: viewModel.effectiveMaxHealth
                     )
                     StaminaBarView(
                         stamina: viewModel.player.stamina,
@@ -111,14 +164,29 @@ struct GameView: View {
                     .padding(.top, 40)
             }
             Spacer()
-            HStack {
+            HStack(alignment: .bottom) {
                 JoystickView(offset: $viewModel.joystickOffset)
                     .padding(.leading, 20)
                     .padding(.bottom, 50)
+
                 Spacer()
-                SprintButtonView(
-                    isSprinting: $viewModel.player.isSprinting
-                )
+
+                // right side controls
+                VStack(spacing: 15) {
+                    // fish button (context-sensitive)
+                    if viewModel.canFish {
+                        FishButtonView(onTap: { viewModel.startFishing() })
+                    }
+
+                    // tool button
+                    ToolButtonView(
+                        equippedTool: viewModel.player.equippedTool,
+                        onLongPress: { viewModel.openToolMenu() }
+                    )
+
+                    // sprint button
+                    SprintButtonView(isSprinting: $viewModel.player.isSprinting)
+                }
                 .padding(.trailing, 60)
                 .padding(.bottom, 20)
             }

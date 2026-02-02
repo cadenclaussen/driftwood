@@ -23,7 +23,13 @@ struct ContentView: View {
 
             case .playing:
                 if let profileIndex = appViewModel.selectedProfileIndex {
-                    GameView(profile: appViewModel.profiles[profileIndex])
+                    GameView(
+                        profile: appViewModel.profiles[profileIndex],
+                        onReturnToMainMenu: {
+                            appViewModel.reloadProfiles()
+                            appViewModel.backToMainMenu()
+                        }
+                    )
                 }
             }
 

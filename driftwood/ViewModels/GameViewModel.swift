@@ -12,9 +12,30 @@ class GameViewModel: ObservableObject {
     @Published var world: World
     @Published var inventoryViewModel: InventoryViewModel
     @Published var isInventoryOpen: Bool = false
+    @Published var isDead: Bool = false
+
+    // tool/fishing state
+    @Published var isToolMenuOpen: Bool = false
+    @Published var isFishing: Bool = false
+    @Published var showingFishingResults: Bool = false
+    @Published var fishingViewModel: FishingViewModel?
+    @Published var fishingState: FishingState = FishingState()
+
+    // notifications
+    @Published var showLevelUpNotification: Bool = false
+    @Published var levelUpNotificationLevel: Int = 0
 
     @Published var joystickOffset: CGSize = .zero
     @Published var screenFadeOpacity: Double = 0
+
+    var onReturnToMainMenu: (() -> Void)?
+    private var deathPosition: CGPoint?
+    private var respawnLandPosition: CGPoint?
+
+    var effectiveMaxHealth: Int {
+        let bonusHearts = inventoryViewModel.inventory.equipment.totalStats.bonusHearts
+        return player.maxHealth + Int(bonusHearts)
+    }
 
     var currentProfileIndex: Int
     private let tileSize: CGFloat = 24
@@ -36,6 +57,10 @@ class GameViewModel: ObservableObject {
         player.magic = profile.magic
         self.player = player
         self.lastHealth = profile.health
+
+        // load fishing state
+        self.fishingState = profile.fishingState
+        self.player.equippedTool = profile.equippedTool
     }
 
     // MARK: - Inventory
@@ -53,7 +78,7 @@ class GameViewModel: ObservableObject {
     }
 
     func useMeal(at index: Int) {
-        inventoryViewModel.useMeal(at: index, player: &player)
+        inventoryViewModel.useMeal(at: index, player: &player, effectiveMaxHealth: effectiveMaxHealth)
         if player.health != lastHealth {
             lastHealth = player.health
             saveCurrentProfile()
@@ -90,9 +115,9 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSwimming = false
             landPlayer.swimStartPoint = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool)
         }
-        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory)
+        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool)
     }
 
     func saveCurrentProfile() {
@@ -120,18 +145,36 @@ class GameViewModel: ObservableObject {
         guard !isDrowning else { return }
         isDrowning = true
 
+        // check if this drowning will kill the player
+        let willDie = player.health <= 1
+
+        if willDie {
+            // store positions for respawn
+            deathPosition = player.position
+            respawnLandPosition = startPoint
+        }
+
         withAnimation(.easeIn(duration: 0.3)) {
             screenFadeOpacity = 1
         }
 
         Task {
             try? await Task.sleep(for: .milliseconds(400))
+
+            if willDie {
+                player.health = 0
+                lastHealth = 0
+                saveCurrentProfile()
+                isDead = true
+                isDrowning = false
+                return
+            }
+
             player.position = startPoint
             player.isSwimming = false
             player.swimStartPoint = nil
             player.health = max(0, player.health - 1)
 
-            // save on health change
             if player.health != lastHealth {
                 lastHealth = player.health
                 saveCurrentProfile()
@@ -144,6 +187,34 @@ class GameViewModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(300))
             isDrowning = false
         }
+    }
+
+    func respawn() {
+        // if died in water, respawn at last land position; otherwise at death position
+        let respawnPosition = respawnLandPosition ?? deathPosition ?? player.position
+
+        player.position = respawnPosition
+        player.isSwimming = false
+        player.swimStartPoint = nil
+        player.health = effectiveMaxHealth
+        player.stamina = player.maxStamina
+
+        lastHealth = player.health
+        saveCurrentProfile()
+
+        deathPosition = nil
+        respawnLandPosition = nil
+
+        withAnimation(.easeOut(duration: 0.3)) {
+            screenFadeOpacity = 0
+        }
+
+        isDead = false
+    }
+
+    func returnToMainMenu() {
+        stopGameLoop()
+        onReturnToMainMenu?()
     }
 
     private func updatePlayerPosition() {
@@ -235,5 +306,111 @@ class GameViewModel: ObservableObject {
             player.isSwimming = false
             player.swimStartPoint = nil
         }
+    }
+
+    // MARK: - Tools
+
+    func equipTool(_ tool: ToolType?) {
+        player.equippedTool = tool
+        isToolMenuOpen = false
+    }
+
+    func openToolMenu() {
+        isToolMenuOpen = true
+    }
+
+    func closeToolMenu() {
+        isToolMenuOpen = false
+    }
+
+    func ownedTools() -> [ToolType] {
+        var tools: [ToolType] = []
+        if inventoryViewModel.inventory.tools.fishingRodTier > 0 {
+            tools.append(.fishingRod)
+        }
+        if inventoryViewModel.inventory.tools.swordTier > 0 {
+            tools.append(.sword)
+        }
+        if inventoryViewModel.inventory.tools.axeTier > 0 {
+            tools.append(.axe)
+        }
+        if inventoryViewModel.inventory.tools.hasWand {
+            tools.append(.wand)
+        }
+        return tools
+    }
+
+    // MARK: - Fishing
+
+    var canFish: Bool {
+        player.equippedTool == .fishingRod && isNearWater() && !player.isSwimming
+    }
+
+    func isNearWater() -> Bool {
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+
+        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)] // up, down, left, right
+        for (dx, dy) in directions {
+            let tile = world.tile(at: playerTileX + dx, y: playerTileY + dy)
+            if tile.isSwimmable {
+                return true
+            }
+        }
+        return false
+    }
+
+    func startFishing() {
+        guard canFish else { return }
+
+        gameLoopCancellable?.cancel()
+        gameLoopCancellable = nil
+
+        let fortune = inventoryViewModel.inventory.totalFishingFortune
+        let vm = FishingViewModel(
+            fortune: fortune,
+            level: fishingState.fishingLevel,
+            inventoryViewModel: inventoryViewModel,
+            fishingState: fishingState
+        )
+        fishingViewModel = vm
+        isFishing = true
+    }
+
+    func endFishing() {
+        guard let vm = fishingViewModel else { return }
+
+        // check for level up
+        let previousLevel = fishingState.fishingLevel
+        let newLevel = vm.fishingState.fishingLevel
+
+        // update fishing state with new catches
+        fishingState = vm.fishingState
+        showingFishingResults = true
+
+        // trigger level up notification if leveled up
+        if newLevel > previousLevel {
+            showFishingLevelUp(newLevel)
+        }
+    }
+
+    func showFishingLevelUp(_ level: Int) {
+        levelUpNotificationLevel = level
+        showLevelUpNotification = true
+
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            await MainActor.run {
+                showLevelUpNotification = false
+            }
+        }
+    }
+
+    func dismissFishingResults() {
+        showingFishingResults = false
+        isFishing = false
+        fishingViewModel = nil
+        saveCurrentProfile()
+        startGameLoop()
     }
 }

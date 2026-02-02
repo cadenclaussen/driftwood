@@ -1,5 +1,38 @@
 # Tasks
 
+### 9. Implement death/game over screen
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Views/DeathScreenView.swift, ViewModels/GameViewModel.swift, Views/GameView.swift, ContentView.swift
+- **Requested**: When player loses all HP, show a death screen with 2 options: (1) Main Menu button - returns to main menu with play button, (2) Respawn button - respawns player where they died. If player died in ocean, respawn at last land position touched.
+- **Context**: Core gameplay loop - players need a way to recover from death
+- **Acceptance Criteria**:
+  - [x] Death screen appears when health reaches 0
+  - [x] Main Menu button returns to main menu
+  - [x] Respawn button respawns player at death location
+  - [x] If died in ocean, respawn at last land position
+  - [x] Health resets on respawn
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created DeathScreenView with "You Died" text and two buttons (Respawn/Main Menu). Modified GameViewModel to track isDead state, deathPosition (where player died), and respawnLandPosition (swimStartPoint if died in water). When health reaches 0 during drowning, shows death screen instead of teleporting. Respawn resets health to max and positions player at last land if drowned, or death position otherwise. Main Menu button stops game loop and triggers callback to return to main menu. Updated GameView to show death screen overlay and pass callback from ContentView.
+
+### 8. Implement fishing system
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Models/FishingState.swift, Models/FishingLootTable.swift, ViewModels/FishingViewModel.swift, Views/Fishing/
+- **Requested**: Implement fishing with: 1) Give player fishing rod at game start, 2) Quick tool menu (hold button, drag to select tool from row), 3) Fishing button appears when rod equipped within 1 tile of water and not swimming, 4) Fishing minigame activates on button press, 5) Catches auto-add to inventory unless full. Use Kiro spec-driven development for all 4 stages before implementation.
+- **Context**: Core gameplay loop - fishing minigame mechanics already documented in docs/outline/minigames/fishing.md
+- **Acceptance Criteria**:
+  - [x] Player starts with fishing rod in inventory
+  - [x] Quick tool menu: hold button shows tool row, drag to equip
+  - [x] Fishing button visible when: rod equipped, within 1 tile of water, not swimming
+  - [x] Fishing minigame functional
+  - [x] Catches auto-added to inventory (or rejected if full)
+  - [x] Kiro specs completed (init, requirements, design, tasks)
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created complete fishing system via Kiro specs (docs/.specs/). New files: FishingState.swift (level 1-10, catches tracking, level thresholds), FishingLootTable.swift (all 10 loot tables from fishing.md with Old Set/Mossy Set/Treasure Chest logic), FishingViewModel.swift (minigame with bouncing indicator, green/perfect zones, combo tracking). Views: ToolButtonView (long-press HUD), ToolQuickMenuView (hold-drag selection), FishButtonView (context-sensitive), FishingMinigameView (timing bar), FishingResultsView (session summary with level-up). Modified: Player.swift (+equippedTool), SaveProfile.swift (+fishingState, +equippedTool persistence), Inventory.swift (starter rod tier=1), GameViewModel.swift (tool menu, isNearWater, canFish, fishing flow), GameView.swift (UI integration), ItemType.swift (+16 fishing resources), InventorySlotView.swift (resource colors).
+
 ### 7. Implement inventory system
 - **Status**: COMPLETED
 - **Type**: Feature

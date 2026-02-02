@@ -114,13 +114,21 @@ struct InventorySlotView: View {
         switch content {
         case .resource(let type, _):
             switch type {
-            case .wood: return .brown
-            case .metalScrap: return .gray
-            case .cloth: return .white
+            case .wood, .driftwood: return .brown
+            case .metalScrap, .platinumScraps: return .gray
+            case .cloth, .leatherScrap: return .white
             case .oil: return .black
-            case .commonFish: return .cyan
-            case .rareFish: return .blue
-            case .rainbowFish: return .purple
+            case .commonFish, .rareFish: return .cyan
+            case .rainbowFish, .theOldOne: return .purple
+            case .seaweed: return .green
+            case .rustyCoin: return .yellow
+            case .sharkTooth, .scale: return .white
+            case .brokenWheel, .wire, .plastic: return .gray
+            case .sailorsJournal: return .brown
+            case .messageInBottle: return .cyan
+            case .timeLocket: return .yellow
+            case .moonFragment: return .blue
+            case .sunFragment: return .orange
             }
         case .foodIngredient:
             return .green

@@ -27,6 +27,9 @@ struct Player {
     var isSprinting: Bool = false
     let sprintSpeedMultiplier: CGFloat = 2.0
 
+    // tools
+    var equippedTool: ToolType? = nil
+
     // swimming
     var isSwimming: Bool = false
     var swimStartPoint: CGPoint? = nil

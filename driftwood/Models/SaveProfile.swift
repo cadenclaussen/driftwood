@@ -32,6 +32,8 @@ struct SaveProfile: Codable, Identifiable {
     var isEmpty: Bool
     var lastPlayed: Date?
     var inventory: Inventory
+    var fishingState: FishingState
+    var equippedTool: ToolType?
 
     static func empty(id: Int) -> SaveProfile {
         let tileSize: CGFloat = 24
@@ -47,11 +49,13 @@ struct SaveProfile: Codable, Identifiable {
             magic: 100,
             isEmpty: true,
             lastPlayed: nil,
-            inventory: .empty()
+            inventory: .empty(),
+            fishingState: FishingState(),
+            equippedTool: nil
         )
     }
 
-    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty()) {
+    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil) {
         self.id = id
         self.position = position
         self.lookDirection = lookDirection
@@ -61,9 +65,11 @@ struct SaveProfile: Codable, Identifiable {
         self.isEmpty = isEmpty
         self.lastPlayed = lastPlayed
         self.inventory = inventory
+        self.fishingState = fishingState
+        self.equippedTool = equippedTool
     }
 
-    init(from player: Player, id: Int, inventory: Inventory) {
+    init(from player: Player, id: Int, inventory: Inventory, fishingState: FishingState, equippedTool: ToolType?) {
         self.id = id
         self.position = CodablePoint(player.position)
         self.lookDirection = CodablePoint(player.lookDirection)
@@ -73,5 +79,7 @@ struct SaveProfile: Codable, Identifiable {
         self.isEmpty = false
         self.lastPlayed = Date()
         self.inventory = inventory
+        self.fishingState = fishingState
+        self.equippedTool = equippedTool
     }
 }
