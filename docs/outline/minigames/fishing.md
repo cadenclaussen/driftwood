@@ -2,7 +2,64 @@
 
 Fishing has levels, starting at level 1, and maximum of level 10, as you level up the loot table becomes bigger.
 
-Fishing is a mini game that allows you to catch a lot of useful items. All the player must do is click at a certain time according to a bar that appears on the screen.
+## Minigame Mechanics
+
+1. A bar appears with a randomly placed green section
+2. An indicator moves across the bar
+3. When the indicator enters the green section, click to catch
+4. On success, another bar appears with a new random green section
+5. Repeat until all catches are complete
+
+### Perfect Catch
+
+The green zone has a smaller "perfect" sub-zone in the center. Clicking in the perfect zone triggers a perfect catch.
+
+### Combo Meter
+
+Consecutive perfect catches build a combo. Each combo level adds +1 fishing fortune for that session. Combo resets on any miss.
+
+## Water Types
+
+Different water types have different loot tables:
+
+| Water Type | Location | Loot Table |
+|------------|----------|------------|
+| Ocean | Surrounding waters | Standard (documented below) |
+| River | Island interior | TBD |
+| Pond | Forest clearings | TBD |
+
+## Fish Shadows
+
+Fish shadows appear in the water before casting. Shadow size/shape hints at potential catch rarity:
+- Small shadow = common fish
+- Medium shadow = uncommon items
+- Large shadow = rare catches
+- Glowing shadow = very rare
+
+### Fishing Fortune
+
+Fishing Fortune determines how many catches (loot rolls) you get per session.
+
+**Formula**: `catches = floor(fortune / 10) + 1`
+
+| Fortune | Catches |
+|---------|---------|
+| 0-9 | 1 |
+| 10-19 | 2 |
+| 20-29 | 3 |
+| 56 | 6 |
+| 100 | 11 |
+
+Fortune is increased by armor (Old Set, Mossy Set), fishing rod upgrades, and Bracelet accessory.
+
+### Fishing Rod Fortune by Tier
+
+| Tier | Fortune |
+|------|---------|
+| 1 | +0 |
+| 2 | +20 |
+| 3 | +50 |
+| 4 | +90 |
 
 ## Loot Table
 

@@ -1,5 +1,20 @@
 # Tasks
 
+### 3. Create player.md outline documentation
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: docs/outline/player.md
+- **Requested**: Create player.md in outline folder with all player system information (health, stamina, magic, money, inventory with 3 pages: items containing gear/tools, and collectibles). Format nicely and ask clarifying questions before implementation. Also added improvement mechanics from brainstorm session.
+- **Context**: Core player systems documentation that will be used as reference for coding
+- **Acceptance Criteria**:
+  - [x] Create docs/outline/player.md with all provided content
+  - [x] Proper markdown formatting
+  - [x] Ask clarifying questions about unclear mechanics
+  - [x] Add selected improvement mechanics (fishing: perfect catch, combo; combat: charged attack, parry, dodge roll, knockback, weak points; movement: sprint, climbing, footsteps, map markers, fast travel; inventory: sorting, favorites, junk, recipe book, storage)
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created comprehensive player.md with all systems documented. Updated fishing.md with minigame mechanics, perfect catch, and combo system. Documented combat (charged attacks, parry with 1s stun, dodge roll), movement (2x sprint, stamina-based climbing, fast travel), inventory features (sorting, junk/merchant system, 30-slot storage), and crafting TBD.
+
 ### 2. Create fishing.md minigame documentation
 - **Status**: COMPLETED
 - **Type**: Feature
