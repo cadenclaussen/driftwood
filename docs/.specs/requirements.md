@@ -1,121 +1,187 @@
-# Player Movement System - Requirements
+# Main Menu System - Requirements
 
 ## Functional Requirements
 
-### FR-1: Player Character Display
+### FR-1: Main Menu Display
 - **Type**: Ubiquitous
-- **Statement**: The system shall display the player as a red circle with diameter equal to half the tile size (12 points).
+- **Statement**: The system shall display a main menu screen when the app launches.
 - **Acceptance Criteria**:
-  - [ ] Player renders as a filled red circle
-  - [ ] Player diameter is 12 points (half of 24pt tile)
-  - [ ] Player is visible on top of the world grid
+  - [ ] Main menu appears on app launch instead of game world
+  - [ ] Menu contains a visible "Play" button
+  - [ ] Menu is centered and appropriately styled
 - **Priority**: Must
-- **Notes**: Using Circle shape with .fill(Color.red)
+- **Notes**: Replace direct GameView launch in ContentView
 
-### FR-2: Player Initial Position
-- **Type**: Ubiquitous
-- **Statement**: The system shall spawn the player at the center of the island when the game starts.
-- **Acceptance Criteria**:
-  - [ ] Player spawns at world center coordinates
-  - [ ] Player is visible on grass tiles at game start
-- **Priority**: Must
-- **Notes**: Center of 10x10 island with 3-tile ocean padding = tile (8, 8) approximately
-
-### FR-3: Virtual Joystick Display
-- **Type**: Ubiquitous
-- **Statement**: The system shall display a virtual joystick control in the bottom-left area of the screen.
-- **Acceptance Criteria**:
-  - [ ] Joystick has a visible base circle (outer ring)
-  - [ ] Joystick has a draggable thumb/knob (inner circle)
-  - [ ] Joystick is positioned in bottom-left with safe area padding
-- **Priority**: Must
-- **Notes**: Semi-transparent to not obstruct gameplay view
-
-### FR-4: Joystick Touch Interaction
+### FR-2: Play Button Interaction
 - **Type**: Event-Driven
-- **Statement**: When the user touches and drags within the joystick area, the system shall move the joystick thumb to follow the touch position within the joystick bounds.
+- **Statement**: When the user taps the Play button, the system shall navigate to the profile selection screen.
 - **Acceptance Criteria**:
-  - [ ] Thumb follows finger position during drag
-  - [ ] Thumb is constrained within the joystick base radius
-  - [ ] Thumb returns to center when touch ends
+  - [ ] Play button responds to tap gesture
+  - [ ] Profile selection screen appears after tapping Play
+  - [ ] Transition is smooth (no abrupt jumps)
 - **Priority**: Must
-- **Notes**: Use DragGesture for touch handling
+- **Notes**: Consider a subtle animation for the transition
 
-### FR-5: Player Movement from Joystick
+### FR-3: Profile Selection Display
+- **Type**: Ubiquitous
+- **Statement**: The system shall display exactly 3 profile cards on the profile selection screen.
+- **Acceptance Criteria**:
+  - [ ] Three cards are visible on screen
+  - [ ] Cards are arranged horizontally or in a clear layout
+  - [ ] Each card is clearly tappable
+- **Priority**: Must
+- **Notes**: Cards should be evenly spaced for iPhone 16e landscape
+
+### FR-4: Profile Card Stats Display
+- **Type**: Ubiquitous
+- **Statement**: Each profile card shall display the player's current hearts, stamina, and magic power.
+- **Acceptance Criteria**:
+  - [ ] Hearts displayed using heart icons (filled/empty)
+  - [ ] Stamina displayed as a bar or numeric value
+  - [ ] Magic power displayed appropriately
+  - [ ] Stats reflect saved profile data
+- **Priority**: Must
+- **Notes**: Match existing HUD style (HeartsView, StaminaBarView)
+
+### FR-5: Profile Card Location Preview
+- **Type**: Ubiquitous
+- **Statement**: Each profile card shall display a preview image showing where the player was when they last saved.
+- **Acceptance Criteria**:
+  - [ ] Preview shows a snapshot of the game world
+  - [ ] Player position is visible in the preview
+  - [ ] Preview is appropriately sized within the card
+- **Priority**: Must
+- **Notes**: Could be a rendered mini-map or a screenshot thumbnail
+
+### FR-6: Empty Profile Card Display
 - **Type**: State-Driven
-- **Statement**: While the joystick is being dragged, the system shall move the player in the direction and at a speed proportional to the joystick displacement.
+- **Statement**: While a profile has no saved data, the system shall display the card with default/empty state indicators.
 - **Acceptance Criteria**:
-  - [ ] Player moves in direction of joystick offset
-  - [ ] Movement speed scales with joystick displacement (further = faster)
-  - [ ] Movement is smooth and continuous (not grid-locked)
-  - [ ] Player stops moving when joystick is released
+  - [ ] Empty profiles show "New Game" or empty state
+  - [ ] Hearts show max health (5 hearts)
+  - [ ] Stamina shows full bar
+  - [ ] Location preview shows starting area or placeholder
 - **Priority**: Must
-- **Notes**: Use Timer or DisplayLink for continuous movement updates
+- **Notes**: Empty profiles start fresh at island center
 
-### FR-6: Landscape Orientation Lock
-- **Type**: Ubiquitous
-- **Statement**: The system shall lock the app to landscape orientation on iPhone devices.
+### FR-7: Profile Selection
+- **Type**: Event-Driven
+- **Statement**: When the user taps a profile card, the system shall initiate a fade-to-black transition and load that profile's game state.
 - **Acceptance Criteria**:
-  - [ ] App launches in landscape mode
-  - [ ] App does not rotate to portrait mode
-  - [ ] Both landscape left and landscape right are supported
+  - [ ] Tapping a card triggers the transition
+  - [ ] Screen fades to black smoothly
+  - [ ] Game loads after fade completes
 - **Priority**: Must
-- **Notes**: Configure via Info.plist UISupportedInterfaceOrientations
+- **Notes**: Use existing screenFadeOpacity pattern from GameViewModel
 
-### FR-7: Player Layer Ordering
-- **Type**: Ubiquitous
-- **Statement**: The system shall render the player above the world grid layer.
+### FR-8: Fade-to-Black Transition
+- **Type**: Event-Driven
+- **Statement**: When a profile is selected, the system shall perform a fade-to-black animation lasting approximately 0.5 seconds, then fade in to the game view.
 - **Acceptance Criteria**:
-  - [ ] Player is visible when over any tile type
-  - [ ] Player does not get obscured by tiles
+  - [ ] Fade-out to black takes ~0.3 seconds
+  - [ ] Brief pause at full black (~0.2 seconds)
+  - [ ] Fade-in to game takes ~0.3 seconds
+  - [ ] Total transition feels polished, not rushed
 - **Priority**: Must
-- **Notes**: Use ZStack with player overlay or .overlay modifier
+- **Notes**: Similar to drowning fade but for menu transition
+
+### FR-9: Player Position Restoration
+- **Type**: Event-Driven
+- **Statement**: When a saved profile is loaded, the system shall position the player at their last saved location.
+- **Acceptance Criteria**:
+  - [ ] Player spawns at saved coordinates
+  - [ ] Player faces saved direction
+  - [ ] Stats (health, stamina) match saved values
+- **Priority**: Must
+- **Notes**: New profiles start at island center
+
+### FR-10: Save Profile Model
+- **Type**: Ubiquitous
+- **Statement**: The system shall store save profile data including player position, health, stamina, and magic power.
+- **Acceptance Criteria**:
+  - [ ] SaveProfile struct/class contains all required fields
+  - [ ] Profile can be encoded/decoded for persistence
+  - [ ] Profile ID identifies which slot (1, 2, or 3)
+- **Priority**: Must
+- **Notes**: Add magic property to Player model
+
+### FR-11: Profile Persistence
+- **Type**: Event-Driven
+- **Statement**: When the game state changes significantly, the system shall persist the current profile to storage.
+- **Acceptance Criteria**:
+  - [ ] Profile saves to UserDefaults or file storage
+  - [ ] Profile persists across app launches
+  - [ ] Save does not cause frame drops or lag
+- **Priority**: Must
+- **Notes**: Consider auto-save at regular intervals or on specific events
+
+### FR-12: Profile Loading on App Launch
+- **Type**: Event-Driven
+- **Statement**: When the app launches, the system shall load all existing profiles from storage to display on the profile selection screen.
+- **Acceptance Criteria**:
+  - [ ] Saved profiles load with correct data
+  - [ ] Empty/missing profiles show as new
+  - [ ] Loading completes before menu display
+- **Priority**: Must
+- **Notes**: Use Codable for easy serialization
 
 ## Non-Functional Requirements
 
-### NFR-1: Movement Smoothness
+### NFR-1: Transition Smoothness
 - **Category**: Performance
-- **Statement**: The system shall update player position at a minimum of 60 frames per second during movement.
+- **Statement**: The fade transition shall maintain 60 FPS throughout the animation.
 - **Acceptance Criteria**:
-  - [ ] No visible stuttering during player movement
-  - [ ] Movement feels responsive to joystick input
+  - [ ] No frame drops during fade animation
+  - [ ] No visible stuttering or jank
 - **Priority**: Should
-- **Notes**: Use withAnimation or Timer at 1/60 interval
+- **Notes**: Use SwiftUI animation system
 
-### NFR-2: Joystick Usability
+### NFR-2: Menu Responsiveness
 - **Category**: Usability
-- **Statement**: The joystick shall be sized appropriately for comfortable thumb control (minimum 100pt diameter).
+- **Statement**: All menu buttons and cards shall respond to taps within 100ms.
 - **Acceptance Criteria**:
-  - [ ] Joystick base is at least 100 points in diameter
-  - [ ] Joystick thumb is at least 40 points in diameter
-  - [ ] Touch target is easy to hit without looking
+  - [ ] Button tap feedback is immediate
+  - [ ] No perceived input lag
 - **Priority**: Should
-- **Notes**: Consider different device sizes
+- **Notes**: Avoid heavy computations on tap
 
-### NFR-3: Visual Clarity
+### NFR-3: Card Readability
 - **Category**: Usability
-- **Statement**: The joystick shall be semi-transparent to minimize obstruction of the game world.
+- **Statement**: Profile card stats and preview shall be clearly readable on iPhone 16e.
 - **Acceptance Criteria**:
-  - [ ] Joystick has reduced opacity (0.5-0.7)
-  - [ ] Game world remains visible behind joystick
-- **Priority**: Could
-- **Notes**: Balance visibility of control with gameplay view
+  - [ ] Text is legible without squinting
+  - [ ] Icons are appropriately sized
+  - [ ] Preview image has sufficient detail
+- **Priority**: Should
+- **Notes**: Optimize for iPhone 16e landscape
+
+### NFR-4: Save Reliability
+- **Category**: Reliability
+- **Statement**: Profile saves shall not corrupt or lose data during normal operation.
+- **Acceptance Criteria**:
+  - [ ] Saves complete successfully
+  - [ ] Data loads without corruption
+  - [ ] App crash during save does not corrupt profile
+- **Priority**: Must
+- **Notes**: Consider atomic writes
 
 ## Constraints
 - Must use SwiftUI (existing codebase pattern)
-- Must work on iPhone devices (primary target)
-- Tile size is fixed at 24 points (existing constant)
-- No external dependencies (pure SwiftUI implementation)
+- Must work on iPhone 16e (target device)
+- No external dependencies (pure SwiftUI/Foundation)
+- Landscape orientation only
+- Maximum 3 save profiles (no profile management UI)
 
 ## Assumptions
-- Device has touch screen capability
-- Single touch point for joystick control
-- Player can move freely anywhere (no collision boundaries yet)
-- World view will eventually follow player (camera system is future work)
+- Player model will be extended with magic power property
+- Profiles are fixed slots (1, 2, 3), not dynamically created
+- App has write access to UserDefaults/Documents
+- Device has sufficient storage for 3 profiles
 
 ## Edge Cases
-- **Joystick touch outside bounds**: Clamp thumb position to maximum radius
-- **Very fast drag movements**: Ensure thumb stays within bounds, position updates smoothly
-- **Player moves off visible screen**: No restriction for now (camera follow is future feature)
-- **App backgrounded during movement**: Stop movement, reset joystick to center
-- **Device rotation attempt**: Block rotation, maintain landscape
+- **All profiles empty**: Show 3 "New Game" cards, any can be selected
+- **App killed during save**: Use atomic writes to prevent corruption
+- **Storage full**: Show error, do not corrupt existing saves
+- **Corrupted profile data**: Reset to empty state, log error
+- **Rapid profile tap**: Debounce to prevent multiple transitions
+- **App backgrounded during transition**: Complete transition, pause game if needed
