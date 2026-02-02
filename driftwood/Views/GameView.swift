@@ -44,6 +44,14 @@ struct GameView: View {
                     .opacity(viewModel.screenFadeOpacity)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
+
+                if viewModel.isInventoryOpen {
+                    InventoryView(
+                        viewModel: viewModel.inventoryViewModel,
+                        onClose: { viewModel.closeInventory() },
+                        onUseMeal: { index in viewModel.useMeal(at: index) }
+                    )
+                }
             }
         }
         .onAppear { viewModel.startGameLoop() }
@@ -96,6 +104,12 @@ struct GameView: View {
 
     private var controlsLayer: some View {
         VStack {
+            HStack {
+                Spacer()
+                InventoryButton(onTap: { viewModel.openInventory() })
+                    .padding(.trailing, 60)
+                    .padding(.top, 40)
+            }
             Spacer()
             HStack {
                 JoystickView(offset: $viewModel.joystickOffset)

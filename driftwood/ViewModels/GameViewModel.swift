@@ -10,6 +10,8 @@ import Combine
 class GameViewModel: ObservableObject {
     @Published var player: Player
     @Published var world: World
+    @Published var inventoryViewModel: InventoryViewModel
+    @Published var isInventoryOpen: Bool = false
 
     @Published var joystickOffset: CGSize = .zero
     @Published var screenFadeOpacity: Double = 0
@@ -25,6 +27,7 @@ class GameViewModel: ObservableObject {
     init(profile: SaveProfile) {
         self.world = World()
         self.currentProfileIndex = profile.id
+        self.inventoryViewModel = InventoryViewModel(inventory: profile.inventory)
 
         var player = Player(startPosition: profile.position.cgPoint)
         player.lookDirection = profile.lookDirection.cgPoint
@@ -33,6 +36,28 @@ class GameViewModel: ObservableObject {
         player.magic = profile.magic
         self.player = player
         self.lastHealth = profile.health
+    }
+
+    // MARK: - Inventory
+
+    func openInventory() {
+        isInventoryOpen = true
+        gameLoopCancellable?.cancel()
+        gameLoopCancellable = nil
+    }
+
+    func closeInventory() {
+        isInventoryOpen = false
+        inventoryViewModel.clearSelection()
+        startGameLoop()
+    }
+
+    func useMeal(at index: Int) {
+        inventoryViewModel.useMeal(at: index, player: &player)
+        if player.health != lastHealth {
+            lastHealth = player.health
+            saveCurrentProfile()
+        }
     }
 
     func startGameLoop() {
@@ -65,9 +90,9 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSwimming = false
             landPlayer.swimStartPoint = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory)
         }
-        return SaveProfile(from: player, id: currentProfileIndex)
+        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory)
     }
 
     func saveCurrentProfile() {

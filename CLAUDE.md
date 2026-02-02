@@ -40,7 +40,8 @@
 
 - Project file: `driftwood.xcodeproj`
 - Scheme: `driftwood`
-- Target simulator: iPhone 16 (latest iOS version)
+- Target simulator: iPhone 16e (user's device)
+- Target device: iPhone 16e - all UI formatting, button positions, and borders should be optimized for this device
 - Xcode installation: `/Applications/Xcode.app`
 - Developer tools path must be set to Xcode (not Command Line Tools)
 - If `xcodebuild` fails with "requires Xcode" error, run:

@@ -31,6 +31,7 @@ struct SaveProfile: Codable, Identifiable {
     var magic: CGFloat
     var isEmpty: Bool
     var lastPlayed: Date?
+    var inventory: Inventory
 
     static func empty(id: Int) -> SaveProfile {
         let tileSize: CGFloat = 24
@@ -45,11 +46,12 @@ struct SaveProfile: Codable, Identifiable {
             stamina: 100,
             magic: 100,
             isEmpty: true,
-            lastPlayed: nil
+            lastPlayed: nil,
+            inventory: .empty()
         )
     }
 
-    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?) {
+    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty()) {
         self.id = id
         self.position = position
         self.lookDirection = lookDirection
@@ -58,9 +60,10 @@ struct SaveProfile: Codable, Identifiable {
         self.magic = magic
         self.isEmpty = isEmpty
         self.lastPlayed = lastPlayed
+        self.inventory = inventory
     }
 
-    init(from player: Player, id: Int) {
+    init(from player: Player, id: Int, inventory: Inventory) {
         self.id = id
         self.position = CodablePoint(player.position)
         self.lookDirection = CodablePoint(player.lookDirection)
@@ -69,5 +72,6 @@ struct SaveProfile: Codable, Identifiable {
         self.magic = player.magic
         self.isEmpty = false
         self.lastPlayed = Date()
+        self.inventory = inventory
     }
 }

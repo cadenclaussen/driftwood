@@ -28,4 +28,13 @@ enum TileType {
         case .rock: return false
         }
     }
+
+    var isSwimmable: Bool {
+        switch self {
+        case .ocean: return true
+        case .grass: return false
+        case .beach: return false
+        case .rock: return false
+        }
+    }
 }
