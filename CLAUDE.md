@@ -1,0 +1,224 @@
+# Task Tracking - MANDATORY
+
+**Every user request MUST be tracked in `docs/task.md` FIRST.**
+
+## Workflow
+1. User requests task → EITHER IMMEDIATELY add to `docs/task.md` OR if the user asks for the task to be done in the future, IMMEDIATELY add to `docs/backlog.md`
+2. Check archiving: `wc -l docs/task.md` and `wc -l docs/backlog.md` - if > 300 lines, archive old
+   completed tasks to docs/.archive/tasks.md
+3. Set status: TASK → IN_PROGRESS → COMPLETED
+4. On failure: Increment failure count, document what went wrong
+
+## Task Format
+```markdown
+### N. Brief task description
+- **Status**: TASK | IN_PROGRESS | COMPLETED
+- **Type**: Bug | Feature
+- **Location**: File:line
+- **Requested**: Full detailed user request
+- **Context**: Why it matters, related features
+- **Acceptance Criteria**: Checkboxes for verification
+- **Failure Count**: N
+- **Failures**: Attempt N: What went wrong and why
+- **Solution**: Exact changes made and verification
+```
+
+**Type Field**:
+- **Bug**: Fixes for broken functionality (incorrect behavior, crashes,
+  performance issues)
+- **Feature**: New functionality, improvements, or refactoring (requires
+  documentation updates)
+
+## Critical Requirements
+1. **No exceptions** - User request = immediate task.md entry
+2. **Be verbose in Requested** - Capture full context for verification
+3. **Document acceptance criteria** - Specific checks to verify completion
+4. **Update status in real-time** - Move through states as you work
+5. **Always verify** - Re-read request and check criteria before COMPLETED
+
+## Xcode Project Configuration
+
+- Project file: `driftwood.xcodeproj`
+- Scheme: `driftwood`
+- Target simulator: iPhone 16 (latest iOS version)
+- Xcode installation: `/Applications/Xcode.app`
+- Developer tools path must be set to Xcode (not Command Line Tools)
+- If `xcodebuild` fails with "requires Xcode" error, run:
+  ```bash
+  sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+  ```
+
+## Game Design: Driftwood Kingdom
+
+- **Genre**: 2D top-down adventure (Zelda-like)
+- **Art Style**: Pixel art (Minecraft-inspired)
+- **Setting**: Cute island with beach, forest, trees, surrounded by ocean
+- **World Size**: Starting at 10x10 tile grid
+- **Players**: Single-player with 3 save profiles (for sharing device with friends)
+
+## iOS App Development
+
+REQUIRED: All iOS app development MUST follow the style guide below.
+
+When writing Swift/SwiftUI code:
+1. Use MVVM pattern
+2. Follow Apple Human Interface Guidelines
+3. Maintain consistency with existing code patterns
+
+## iOS App Style Guide (Reference)
+
+### Architecture
+
+- Use MVVM (Model-View-ViewModel) pattern for SwiftUI apps
+- Separate concerns: Views for UI, ViewModels for business logic, Models for data
+- Keep views simple and focused on presentation
+- Use dependency injection for testability
+- Follow Apple's Human Interface Guidelines
+
+### SwiftUI Code Style
+
+#### View Structure
+
+- Order SwiftUI properties by type: @State, @Binding, @ObservedObject, @EnvironmentObject, then regular properties
+- Keep view body under 10 lines; extract subviews if longer
+- Use private properties and methods unless they need to be public
+- Group related modifiers together
+- Apply layout modifiers (padding, frame) before styling modifiers (background, foreground)
+
+#### Naming Conventions
+
+- Use clear, descriptive names that reveal intent
+- Views: Noun + "View" suffix (e.g., `ProfileView`, `SettingsView`)
+- ViewModels: Noun + "ViewModel" suffix (e.g., `ProfileViewModel`)
+- Models: Singular nouns (e.g., `User`, `Item`)
+- Functions: Verb phrases (e.g., `fetchData()`, `handleSubmit()`)
+- Boolean properties: Use "is", "has", "should" prefix (e.g., `isLoading`, `hasError`)
+
+#### State Management
+
+- Use @State for simple, local view state
+- Use @Binding to share state between parent and child views
+- Use @ObservedObject or @StateObject for complex state with ObservableObject
+- Use @EnvironmentObject for app-wide shared state
+- Keep state as local as possible; only lift state when necessary
+
+#### Code Organization
+
+- One view per file unless views are tightly coupled
+- Group files by feature, not by type
+- Structure: Models, ViewModels, Views, Services, Utilities
+- Use extensions to organize code by functionality
+
+### Swift Language Style
+
+#### General
+
+- Follow Swift API Design Guidelines
+- Use Swift's type inference; avoid redundant type annotations
+- Prefer structs over classes unless reference semantics needed
+- Use optionals appropriately; avoid force unwrapping (!)
+- Use guard for early returns
+- Prefer immutability (let) over mutability (var)
+
+#### Error Handling
+
+- Use Swift's native error handling (do-try-catch)
+- Create custom error types when appropriate
+- Provide clear error messages
+- Handle errors at appropriate levels
+
+#### Async/Await
+
+- Use async/await for asynchronous operations
+- Mark functions with async when they perform async work
+- Use Task for concurrent operations
+- Handle cancellation appropriately
+
+### UI/UX Guidelines
+
+#### Design Principles
+
+- Follow Apple's Human Interface Guidelines
+- Design for accessibility (VoiceOver, Dynamic Type, color contrast)
+- Use native iOS patterns and components
+- Support both light and dark mode
+- Design for all device sizes (iPhone, iPad)
+
+#### Visual Design
+
+- Use SF Symbols for icons
+- Follow iOS spacing conventions (8pt grid)
+- Use semantic colors (Color.primary, Color.secondary)
+- Maintain consistent spacing and alignment
+- Use native iOS animations and transitions
+
+### Coding Style
+
+#### General Guidelines
+
+- KISS: Keep code simple and readable
+- No emojis in code or documentation unless explicitly requested
+- Use descriptive variable and function names
+- Prefer explicit over clever
+- Prefer readability over brevity
+- One responsibility per function
+- Keep functions small and focused
+- Aggressively refactor code when possible
+- Aggressively remove dead code immediately
+
+#### Top Down
+
+- Do not do this:
+```
+def function2() { ... }
+def function1() { ... }
+def main() {
+    function1()
+    function2()
+}
+```
+
+- Do this instead:
+```
+def main() {
+    function1()
+    function2()
+}
+def function1() { ... }
+def function2() { ... }
+```
+
+#### Indentation
+
+- Use 4-space indents
+- Use spaces, not tabs
+
+#### Short Circuit
+
+Use short-circuit pattern for cleaner code:
+
+- Bad:
+```swift
+if condition1 {
+    if condition2 {
+        if condition3 {
+            doSomething()
+        }
+    }
+}
+```
+
+- Good:
+```swift
+guard condition1 else { return }
+guard condition2 else { return }
+guard condition3 else { return }
+doSomething()
+```
+
+#### Comments
+
+- Use terse, inline comments
+- No block comments
+- Avoid obvious comments
+- Comment complex logic only
