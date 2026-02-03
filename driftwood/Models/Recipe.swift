@@ -51,9 +51,9 @@ struct Recipe: Identifiable {
     static var allRecipes: [Recipe] {
         [
             Recipe(
-                id: "fixed_wheel",
-                name: "Fixed Wheel",
-                result: .collectible(.resource(type: .fixedWheel, quantity: 1)),
+                id: "wheel",
+                name: "Wheel",
+                result: .collectible(.resource(type: .wheel, quantity: 1)),
                 materials: [
                     CraftingMaterial(resource: .driftwood, quantity: 4),
                     CraftingMaterial(resource: .brokenWheel, quantity: 1)

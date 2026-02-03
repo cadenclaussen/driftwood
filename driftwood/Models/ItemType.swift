@@ -116,7 +116,7 @@ enum ResourceType: String, Codable, CaseIterable {
     case moonFragment
     case sunFragment
     case leatherScrap
-    case fixedWheel
+    case wheel
 
     var displayName: String {
         switch self {
@@ -143,7 +143,7 @@ enum ResourceType: String, Codable, CaseIterable {
         case .moonFragment: return "Moon Fragment"
         case .sunFragment: return "Sun Fragment"
         case .leatherScrap: return "Leather Scrap"
-        case .fixedWheel: return "Fixed Wheel"
+        case .wheel: return "Wheel"
         }
     }
 
@@ -172,13 +172,13 @@ enum ResourceType: String, Codable, CaseIterable {
         case .moonFragment: return "moon.fill"
         case .sunFragment: return "sun.max.fill"
         case .leatherScrap: return "LeatherScrap"
-        case .fixedWheel: return "FixedWheel"
+        case .wheel: return "Wheel"
         }
     }
 
     var usesCustomImage: Bool {
         switch self {
-        case .commonFish, .rareFish, .theOldOne, .wood, .driftwood, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .fixedWheel: return true
+        case .commonFish, .rareFish, .theOldOne, .wood, .driftwood, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .wheel: return true
         default: return false
         }
     }
@@ -191,7 +191,7 @@ enum ResourceType: String, Codable, CaseIterable {
             return .common
         case .metalScrap, .oil, .overgrownCoin, .sharkTooth, .scale, .wire, .plastic:
             return .uncommon
-        case .rareFish, .sailorsJournal, .platinumScraps, .brokenWheel, .fixedWheel:
+        case .rareFish, .sailorsJournal, .platinumScraps, .brokenWheel, .wheel:
             return .rare
         case .rainbowFish, .messageInBottle, .theOldOne, .timeLocket, .moonFragment, .sunFragment:
             return .epic

@@ -131,7 +131,7 @@ struct InventorySlotView: View {
             case .seaweed: return .green
             case .overgrownCoin: return .yellow
             case .sharkTooth, .scale: return .white
-            case .brokenWheel, .wire, .plastic, .fixedWheel: return .gray
+            case .brokenWheel, .wire, .plastic, .wheel: return .gray
             case .sailorsJournal: return .brown
             case .messageInBottle: return .cyan
             case .timeLocket: return .yellow
