@@ -17,8 +17,7 @@ struct ToolButtonView: View {
                 .fill(isPressed ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7))
                 .frame(width: 60, height: 60)
 
-            Image(systemName: iconName)
-                .font(.system(size: 24))
+            toolImage
                 .foregroundColor(.white)
         }
         .overlay(
@@ -43,7 +42,21 @@ struct ToolButtonView: View {
         )
     }
 
-    private var iconName: String {
-        equippedTool?.iconName ?? "wrench.and.screwdriver"
+    @ViewBuilder
+    private var toolImage: some View {
+        if let tool = equippedTool {
+            if tool.usesCustomImage {
+                Image(tool.iconName)
+                    .resizable()
+                    .interpolation(.none)
+                    .frame(width: 44, height: 44)
+            } else {
+                Image(systemName: tool.iconName)
+                    .font(.system(size: 24))
+            }
+        } else {
+            Image(systemName: "wrench.and.screwdriver")
+                .font(.system(size: 24))
+        }
     }
 }

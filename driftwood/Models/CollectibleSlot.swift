@@ -44,6 +44,17 @@ enum SlotContent: Codable, Equatable {
         }
     }
 
+    var usesCustomImage: Bool {
+        switch self {
+        case .resource(let type, _):
+            return type.usesCustomImage
+        case .armor(let piece):
+            return piece.usesCustomImage
+        default:
+            return false
+        }
+    }
+
     var rarity: ItemRarity {
         switch self {
         case .resource(let type, _):

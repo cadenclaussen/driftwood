@@ -100,17 +100,24 @@ class FishingViewModel: ObservableObject {
         // check if in perfect zone
         let perfectEnd = perfectZoneStart + perfectZoneWidth
         if indicatorPosition >= perfectZoneStart && indicatorPosition <= perfectEnd {
-            let item = rollLoot()
-            result = .perfect(item: item)
-            comboCount += 1
-            sessionFortune += 1 // combo bonus
+            if let item = rollLoot() {
+                result = .perfect(item: item)
+                comboCount += 1
+                sessionFortune += 1 // combo bonus
+            } else {
+                result = .noCatch
+                comboCount = 0
+            }
         }
         // check if in green zone
         else {
             let greenEnd = greenZoneStart + greenZoneWidth
             if indicatorPosition >= greenZoneStart && indicatorPosition <= greenEnd {
-                let item = rollLoot()
-                result = .success(item: item)
+                if let item = rollLoot() {
+                    result = .success(item: item)
+                } else {
+                    result = .noCatch
+                }
                 comboCount = 0
             } else {
                 result = .miss
@@ -139,6 +146,21 @@ class FishingViewModel: ObservableObject {
             } else {
                 isSessionComplete = true
             }
+        } else if result.isNoCatch {
+            // nothing caught but continue fishing
+            remainingCatches -= 1
+            if remainingCatches > 0 {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    await MainActor.run {
+                        self.setupNextCatch()
+                        self.startAnimation()
+                        self.lastCatchResult = nil
+                    }
+                }
+            } else {
+                isSessionComplete = true
+            }
         } else {
             isSessionComplete = true
         }
@@ -146,7 +168,10 @@ class FishingViewModel: ObservableObject {
         return result
     }
 
-    private func rollLoot() -> FishingCatch {
+    private func rollLoot() -> FishingCatch? {
+        // 25% chance to catch nothing
+        guard Double.random(in: 0..<1) >= 0.25 else { return nil }
+
         let item = FishingLootTable.roll(
             level: level,
             collectedOldPieces: collectedOldPieces,
@@ -165,7 +190,7 @@ class FishingViewModel: ObservableObject {
         // try to add to inventory
         let added = inventoryViewModel.addItem(item)
 
-        // update fishing state
+        // update fishing state (only when something is caught)
         fishingState.addCatch()
 
         var catch_ = FishingCatch(item: item)

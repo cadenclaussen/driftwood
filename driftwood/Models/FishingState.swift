@@ -39,18 +39,24 @@ struct FishingCatch: Identifiable {
 
 enum CatchResult {
     case miss
+    case noCatch // hit the zone but 50% chance failed
     case success(item: FishingCatch)
     case perfect(item: FishingCatch)
 
     var isSuccess: Bool {
         switch self {
-        case .miss: return false
+        case .miss, .noCatch: return false
         case .success, .perfect: return true
         }
     }
 
     var isPerfect: Bool {
         if case .perfect = self { return true }
+        return false
+    }
+
+    var isNoCatch: Bool {
+        if case .noCatch = self { return true }
         return false
     }
 }

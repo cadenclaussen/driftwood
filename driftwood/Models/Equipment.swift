@@ -54,7 +54,23 @@ struct ArmorPiece: Codable, Identifiable, Equatable {
     }
 
     var iconName: String {
-        slot.iconName
+        if usesCustomImage {
+            switch (setType, slot) {
+            case (.old, .hat): return "OldHat"
+            case (.old, .shirt): return "OldShirt"
+            case (.old, .pants): return "OldPants"
+            case (.old, .boots): return "OldBoots"
+            default: return slot.iconName
+            }
+        }
+        return slot.iconName
+    }
+
+    var usesCustomImage: Bool {
+        switch (setType, slot) {
+        case (.old, .hat), (.old, .shirt), (.old, .pants), (.old, .boots): return true
+        default: return false
+        }
     }
 
     var rarity: ItemRarity {

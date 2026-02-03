@@ -39,10 +39,18 @@ struct InventorySlotView: View {
             )
     }
 
+    @ViewBuilder
     private func itemIcon(_ content: SlotContent) -> some View {
-        Image(systemName: content.iconName)
-            .font(.system(size: 20))
-            .foregroundColor(iconColor(for: content))
+        if content.usesCustomImage {
+            Image(content.iconName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 40, height: 40)
+        } else {
+            Image(systemName: content.iconName)
+                .font(.system(size: 20))
+                .foregroundColor(iconColor(for: content))
+        }
     }
 
     private func quantityBadge(_ content: SlotContent) -> some View {
@@ -121,9 +129,9 @@ struct InventorySlotView: View {
             case .commonFish, .rareFish: return .cyan
             case .rainbowFish, .theOldOne: return .purple
             case .seaweed: return .green
-            case .rustyCoin: return .yellow
+            case .overgrownCoin: return .yellow
             case .sharkTooth, .scale: return .white
-            case .brokenWheel, .wire, .plastic: return .gray
+            case .brokenWheel, .wire, .plastic, .fixedWheel: return .gray
             case .sailorsJournal: return .brown
             case .messageInBottle: return .cyan
             case .timeLocket: return .yellow
@@ -149,10 +157,21 @@ struct EquipmentSlotView: View {
     let iconName: String
     let item: (any Identifiable)?
     let itemIconName: String?
+    let itemUsesCustomImage: Bool
     let isSelected: Bool
     let onTap: () -> Void
 
     private let slotSize: CGFloat = 50
+
+    init(label: String, iconName: String, item: (any Identifiable)?, itemIconName: String?, itemUsesCustomImage: Bool = false, isSelected: Bool, onTap: @escaping () -> Void) {
+        self.label = label
+        self.iconName = iconName
+        self.item = item
+        self.itemIconName = itemIconName
+        self.itemUsesCustomImage = itemUsesCustomImage
+        self.isSelected = isSelected
+        self.onTap = onTap
+    }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -165,9 +184,16 @@ struct EquipmentSlotView: View {
                     )
 
                 if let itemIcon = itemIconName {
-                    Image(systemName: itemIcon)
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
+                    if itemUsesCustomImage {
+                        Image(itemIcon)
+                            .resizable()
+                            .interpolation(.none)
+                            .frame(width: 40, height: 40)
+                    } else {
+                        Image(systemName: itemIcon)
+                            .font(.system(size: 22))
+                            .foregroundColor(.white)
+                    }
                 } else {
                     Image(systemName: iconName)
                         .font(.system(size: 18))

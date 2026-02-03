@@ -37,9 +37,7 @@ struct ItemDetailPanel: View {
 
     private var headerSection: some View {
         HStack {
-            Image(systemName: content.iconName)
-                .font(.system(size: 32))
-                .foregroundColor(rarityColor)
+            itemHeaderIcon
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(content.displayName)
@@ -104,7 +102,7 @@ struct ItemDetailPanel: View {
                 statRow(icon: "heart.fill", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: .red)
             }
             if stats.fishingFortune > 0 {
-                statRow(icon: "fish", value: "+\(stats.fishingFortune) Fortune", color: .cyan)
+                fishFortuneRow(value: stats.fishingFortune)
             }
             if stats.defense > 0 {
                 statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: .blue)
@@ -133,7 +131,7 @@ struct ItemDetailPanel: View {
                 statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: .blue)
             }
             if stats.fishingFortune > 0 {
-                statRow(icon: "fish", value: "+\(stats.fishingFortune) Fortune", color: .cyan)
+                fishFortuneRow(value: stats.fishingFortune)
             }
             if stats.movementSpeed > 0 {
                 statRow(icon: "figure.run", value: "+\(Int(stats.movementSpeed * 100))% Speed", color: .green)
@@ -146,6 +144,18 @@ struct ItemDetailPanel: View {
             Image(systemName: icon)
                 .foregroundColor(color)
             Text(value)
+                .foregroundColor(.white)
+        }
+        .font(.system(size: 11))
+    }
+
+    private func fishFortuneRow(value: Int) -> some View {
+        HStack(spacing: 4) {
+            Image("Fish")
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 28, height: 28)
+            Text("+\(value) Fortune")
                 .foregroundColor(.white)
         }
         .font(.system(size: 11))
@@ -191,6 +201,20 @@ struct ItemDetailPanel: View {
             .frame(width: 44, height: 44)
             .background(color.opacity(0.2))
             .cornerRadius(8)
+        }
+    }
+
+    @ViewBuilder
+    private var itemHeaderIcon: some View {
+        if content.usesCustomImage {
+            Image(content.iconName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 40, height: 40)
+        } else {
+            Image(systemName: content.iconName)
+                .font(.system(size: 32))
+                .foregroundColor(rarityColor)
         }
     }
 

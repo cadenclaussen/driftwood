@@ -1,5 +1,65 @@
 # Tasks
 
+### 13. Implement crafting system
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Views/Inventory/CraftingPageView.swift, Models/, ViewModels/
+- **Requested**: Implement crafting system with: 1) Grid of unlocked recipes (5 columns x 6 rows like collectibles), 2) Red/green color indicating craftability, 3) Click recipe to see required items, 4) Green craft button when craftable, 5) Crafted item moves to collectibles. Recipes: Fixed Wheel (4 driftwood + 1 broken wheel), Sword (5 shark teeth + 8 driftwood).
+- **Context**: Core crafting gameplay loop
+- **Acceptance Criteria**:
+  - [x] Kiro specs completed (init, requirements, design, tasks)
+  - [x] Recipe grid display (5x6 like collectibles)
+  - [x] Red/green color based on craftability
+  - [x] Recipe detail view with required items
+  - [x] Craft button (green when craftable)
+  - [x] Crafted items added to collectibles / tools upgraded
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created Recipe.swift with CraftingMaterial struct and CraftResult enum (supports collectibles and tool upgrades). Added fixedWheel to ResourceType. Added crafting methods to InventoryViewModel (materialCount, canCraft, craft, consumeMaterial). Created RecipeSlotView (green/red border based on craftability), RecipeDetailPanel (materials list with have/need, craft button). Updated CraftingPageView with 5-column grid and detail panel overlay. Two recipes: Fixed Wheel (4 driftwood + 1 broken wheel) and Sword (5 shark teeth + 8 driftwood, upgrades sword tier to 1).
+
+### 12. Add Crafting tab to inventory
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: InventoryViewModel.swift, InventoryView.swift
+- **Requested**: Add a new tab in the inventory called "Crafting". This is a placeholder for crafting system that will be implemented afterwards.
+- **Context**: Preparing UI structure for upcoming crafting feature
+- **Acceptance Criteria**:
+  - [x] Add crafting case to InventoryPage enum
+  - [x] Add crafting tab to inventory header
+  - [x] Create placeholder CraftingPageView
+  - [x] Tab displays correctly in inventory UI
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Added `crafting` case to InventoryPage enum (index 2, shifted character to 3) with title "Crafting" and hammer icon. Created CraftingPageView.swift with "Coming Soon" placeholder. Updated InventoryView switch to include crafting case.
+
+### 11. Respawn player when clicking Main Menu from death screen
+- **Status**: COMPLETED
+- **Type**: Bug
+- **Location**: GameViewModel.swift:215
+- **Requested**: When player dies and clicks "Main Menu", the player should also respawn with full HP. They should go to main menu and not enter the world until they select that save again, but when they do return, they should have full HP (not still be dead).
+- **Context**: Currently clicking Main Menu leaves player in dead state, so returning to the game shows death screen again
+- **Acceptance Criteria**:
+  - [x] Clicking "Main Menu" on death screen resets player health to max
+  - [x] Player is respawned (isDead = false, position reset)
+  - [x] Game state is saved before returning to menu
+  - [x] Returning to saved game shows player alive with full HP
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Modified returnToMainMenu() to include respawn logic before saving and exiting. Resets position (to last land position if drowned), clears swimming state, restores health/stamina to max, sets isDead=false, then saves profile before returning to menu.
+
+### 10. Double fish icon size in collectibles and total bonuses
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: CharacterPageView.swift, InventorySlotView.swift, CollectiblesPageView.swift
+- **Requested**: In the collectibles and total bonuses screens, the fish icon needs to be double the size it currently is
+- **Context**: Fish icons are too small to see clearly
+- **Acceptance Criteria**:
+  - [x] Fish icon in Total Bonuses (CharacterPageView) doubled from 16 to 32
+  - [x] Item icons in collectibles grid (InventorySlotView) increased from 28 to 40
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: CharacterPageView fish icon frame changed from 16x16 to 32x32. InventorySlotView slot size increased from 44 to 56, custom image icons increased from 28x28 to 40x40. CollectiblesPageView grid columns updated to match new 56px slot size.
+
 ### 9. Implement death/game over screen
 - **Status**: COMPLETED
 - **Type**: Feature

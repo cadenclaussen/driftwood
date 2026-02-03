@@ -9,12 +9,14 @@ import Combine
 enum InventoryPage: Int, CaseIterable {
     case items = 0
     case collectibles = 1
-    case character = 2
+    case crafting = 2
+    case character = 3
 
     var title: String {
         switch self {
         case .items: return "Items"
         case .collectibles: return "Collectibles"
+        case .crafting: return "Crafting"
         case .character: return "Character"
         }
     }
@@ -23,6 +25,7 @@ enum InventoryPage: Int, CaseIterable {
         switch self {
         case .items: return "wrench.and.screwdriver"
         case .collectibles: return "square.grid.3x3"
+        case .crafting: return "hammer"
         case .character: return "person"
         }
     }
@@ -42,6 +45,7 @@ class InventoryViewModel: ObservableObject {
     @Published var inventory: Inventory
     @Published var currentPage: InventoryPage = .collectibles
     @Published var selectedSlotIndex: Int?
+    @Published var selectedRecipeId: String?
     @Published var sortMode: SortMode = .recent
 
     init(inventory: Inventory = .empty()) {
@@ -246,5 +250,79 @@ class InventoryViewModel: ObservableObject {
 
     func hasEmptyResourceSlot() -> Bool {
         inventory.resourceSlots.contains { $0.isEmpty }
+    }
+
+    // MARK: - Crafting
+
+    func selectRecipe(_ id: String?) {
+        selectedRecipeId = id
+    }
+
+    func clearRecipeSelection() {
+        selectedRecipeId = nil
+    }
+
+    func materialCount(for resource: ResourceType) -> Int {
+        var total = 0
+        for slot in inventory.collectibles {
+            if case .resource(let type, let qty) = slot.content, type == resource {
+                total += qty
+            }
+        }
+        return total
+    }
+
+    func canCraft(_ recipe: Recipe) -> Bool {
+        for material in recipe.materials {
+            if materialCount(for: material.resource) < material.quantity {
+                return false
+            }
+        }
+        switch recipe.result {
+        case .collectible(let content):
+            if content.isMeal {
+                return canAddMeal()
+            }
+            if content.isStackable {
+                return true
+            }
+            return hasEmptyResourceSlot()
+        case .toolUpgrade:
+            return true
+        }
+    }
+
+    func craft(_ recipe: Recipe) -> Bool {
+        guard canCraft(recipe) else { return false }
+
+        for material in recipe.materials {
+            consumeMaterial(material.resource, quantity: material.quantity)
+        }
+
+        switch recipe.result {
+        case .collectible(let content):
+            _ = addItem(content)
+        case .toolUpgrade(let tool, let tier):
+            inventory.tools.setTier(tier, for: tool)
+        }
+
+        selectedRecipeId = nil
+        return true
+    }
+
+    private func consumeMaterial(_ resource: ResourceType, quantity: Int) {
+        var remaining = quantity
+        for i in 0..<inventory.collectibles.count {
+            guard remaining > 0 else { break }
+            if case .resource(let type, let qty) = inventory.collectibles[i].content, type == resource {
+                let consumed = min(qty, remaining)
+                remaining -= consumed
+                if qty - consumed <= 0 {
+                    inventory.collectibles[i].clear()
+                } else {
+                    inventory.collectibles[i].content = .resource(type: type, quantity: qty - consumed)
+                }
+            }
+        }
     }
 }

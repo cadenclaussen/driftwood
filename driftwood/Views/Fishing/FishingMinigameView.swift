@@ -76,7 +76,7 @@ struct FishingMinigameView: View {
                     width: barWidth * viewModel.greenZoneWidth,
                     height: barHeight - 8
                 )
-                .offset(x: barWidth * viewModel.greenZoneStart + 4)
+                .offset(x: barWidth * viewModel.greenZoneStart, y: 0)
 
             // perfect zone (brighter green)
             RoundedRectangle(cornerRadius: 2)
@@ -85,9 +85,9 @@ struct FishingMinigameView: View {
                     width: barWidth * viewModel.perfectZoneWidth,
                     height: barHeight - 8
                 )
-                .offset(x: barWidth * viewModel.perfectZoneStart + 4)
+                .offset(x: barWidth * viewModel.perfectZoneStart, y: 0)
 
-            // indicator line
+            // indicator line (centered on its position)
             Rectangle()
                 .fill(Color.white)
                 .frame(width: 4, height: barHeight + 10)
@@ -108,6 +108,11 @@ struct FishingMinigameView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.red)
+        case .noCatch:
+            Text("Nothing...")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.gray)
         case .success:
             Text("Catch!")
                 .font(.title2)

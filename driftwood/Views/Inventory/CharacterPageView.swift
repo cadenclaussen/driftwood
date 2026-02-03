@@ -11,18 +11,30 @@ struct CharacterPageView: View {
     @State private var selectedAccessorySlot: AccessorySlotType?
 
     var body: some View {
-        HStack(spacing: 24) {
-            VStack(spacing: 16) {
-                armorSection
-                accessorySection
+        ZStack {
+            HStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    armorSection
+                    accessorySection
+                }
+
+                VStack(spacing: 16) {
+                    upgradesSection
+                    statsSection
+                }
+            }
+            .padding()
+
+            if let slot = selectedArmorSlot,
+               let piece = viewModel.inventory.equipment.piece(for: slot) {
+                armorDetailPanel(piece: piece, slot: slot)
             }
 
-            VStack(spacing: 16) {
-                upgradesSection
-                statsSection
+            if let slot = selectedAccessorySlot,
+               let accessory = viewModel.inventory.accessories.accessory(for: slot) {
+                accessoryDetailPanel(accessory: accessory, slot: slot)
             }
         }
-        .padding()
     }
 
     // MARK: - Armor Section
@@ -50,6 +62,7 @@ struct CharacterPageView: View {
             iconName: slot.iconName,
             item: piece,
             itemIconName: piece?.iconName,
+            itemUsesCustomImage: piece?.usesCustomImage ?? false,
             isSelected: isSelected,
             onTap: {
                 if piece != nil {
@@ -178,7 +191,7 @@ struct CharacterPageView: View {
                     statLine(icon: "shield.fill", label: "Defense", value: "+\(totalDefense)", color: .blue)
                 }
                 if totalFortune > 0 {
-                    statLine(icon: "fish", label: "Fortune", value: "+\(totalFortune)", color: .cyan)
+                    fishFortuneLine(value: totalFortune)
                 }
                 if totalSpeed > 0 {
                     statLine(icon: "figure.run", label: "Speed", value: "+\(Int(totalSpeed * 100))%", color: .green)
@@ -205,5 +218,205 @@ struct CharacterPageView: View {
                 .foregroundColor(.white)
         }
         .font(.system(size: 11))
+    }
+
+    private func fishFortuneLine(value: Int) -> some View {
+        HStack {
+            Image("Fish")
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 32, height: 32)
+            Text("Fortune")
+                .foregroundColor(.gray)
+            Spacer()
+            Text("+\(value)")
+                .foregroundColor(.white)
+        }
+        .font(.system(size: 11))
+    }
+
+    // MARK: - Armor Detail Panel
+
+    private func armorDetailPanel(piece: ArmorPiece, slot: ArmorSlotType) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                if piece.usesCustomImage {
+                    Image(piece.iconName)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: 32, height: 32)
+                } else {
+                    Image(systemName: piece.iconName)
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(piece.displayName)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                    Text(piece.rarity.displayName)
+                        .font(.system(size: 11))
+                        .foregroundColor(rarityColor(piece.rarity))
+                }
+
+                Spacer()
+
+                Button(action: { selectedArmorSlot = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.gray)
+                }
+            }
+
+            Divider()
+
+            armorStatsSection(piece.stats)
+
+            Divider()
+
+            Button(action: {
+                viewModel.unequipArmor(slot)
+                selectedArmorSlot = nil
+            }) {
+                HStack {
+                    Image(systemName: "arrow.uturn.backward")
+                    Text("Remove")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.red)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(6)
+            }
+        }
+        .padding(16)
+        .background(Color.black.opacity(0.95))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(rarityColor(piece.rarity), lineWidth: 2)
+        )
+        .frame(maxWidth: 220)
+    }
+
+    private func armorStatsSection(_ stats: ArmorStats) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Stats")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.gray)
+
+            if stats.bonusHearts > 0 {
+                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: .red)
+            }
+            if stats.defense > 0 {
+                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: .blue)
+            }
+            if stats.fishingFortune > 0 {
+                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: .cyan)
+            }
+            if stats.magicRegen > 0 {
+                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.magicRegen))/s", color: .purple)
+            }
+            if stats.movementSpeed > 0 {
+                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: .green)
+            }
+        }
+    }
+
+    // MARK: - Accessory Detail Panel
+
+    private func accessoryDetailPanel(accessory: Accessory, slot: AccessorySlotType) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: accessory.iconName)
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(accessory.displayName)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                    Text(accessory.rarity.displayName)
+                        .font(.system(size: 11))
+                        .foregroundColor(rarityColor(accessory.rarity))
+                }
+
+                Spacer()
+
+                Button(action: { selectedAccessorySlot = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.gray)
+                }
+            }
+
+            Divider()
+
+            accessoryStatsSection(accessory.stats)
+
+            Divider()
+
+            Button(action: {
+                viewModel.unequipAccessory(slot)
+                selectedAccessorySlot = nil
+            }) {
+                HStack {
+                    Image(systemName: "arrow.uturn.backward")
+                    Text("Remove")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.red)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(6)
+            }
+        }
+        .padding(16)
+        .background(Color.black.opacity(0.95))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(rarityColor(accessory.rarity), lineWidth: 2)
+        )
+        .frame(maxWidth: 220)
+    }
+
+    private func accessoryStatsSection(_ stats: AccessoryStats) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Stats")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.gray)
+
+            if stats.bonusHealth > 0 {
+                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHealth))", color: .red)
+            }
+            if stats.defense > 0 {
+                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: .blue)
+            }
+            if stats.fishingFortune > 0 {
+                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: .cyan)
+            }
+            if stats.maxMP > 0 {
+                statLine(icon: "sparkles", label: "Max MP", value: "+\(Int(stats.maxMP))", color: .purple)
+            }
+            if stats.mpRegen > 0 {
+                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.mpRegen))/s", color: .purple)
+            }
+            if stats.movementSpeed > 0 {
+                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: .green)
+            }
+        }
+    }
+
+    private func rarityColor(_ rarity: ItemRarity) -> Color {
+        switch rarity {
+        case .common: return .gray
+        case .uncommon: return .green
+        case .rare: return .blue
+        case .epic: return .purple
+        }
     }
 }

@@ -213,6 +213,18 @@ class GameViewModel: ObservableObject {
     }
 
     func returnToMainMenu() {
+        // respawn player before returning to menu so they're alive when they return
+        let respawnPosition = respawnLandPosition ?? deathPosition ?? player.position
+        player.position = respawnPosition
+        player.isSwimming = false
+        player.swimStartPoint = nil
+        player.health = effectiveMaxHealth
+        player.stamina = player.maxStamina
+        isDead = false
+        deathPosition = nil
+        respawnLandPosition = nil
+
+        saveCurrentProfile()
         stopGameLoop()
         onReturnToMainMenu?()
     }

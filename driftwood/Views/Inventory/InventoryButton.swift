@@ -13,11 +13,12 @@ struct InventoryButton: View {
             ZStack {
                 Circle()
                     .fill(Color.brown.opacity(0.8))
-                    .frame(width: 50, height: 50)
+                    .frame(width: 60, height: 60)
 
-                Image(systemName: "bag.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.white)
+                Image("InventoryChest")
+                    .resizable()
+                    .interpolation(.none)
+                    .frame(width: 64, height: 64)
             }
             .overlay(
                 Circle()

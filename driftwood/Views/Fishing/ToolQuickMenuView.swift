@@ -85,8 +85,7 @@ struct ToolQuickMenuView: View {
                 .fill(isHighlighted ? Color.blue : (isEquipped ? Color.green.opacity(0.6) : Color.gray.opacity(0.6)))
                 .frame(width: iconSize, height: iconSize)
 
-            Image(systemName: tool.iconName)
-                .font(.system(size: 24))
+            toolImage(for: tool)
                 .foregroundColor(.white)
         }
         .overlay(
@@ -105,6 +104,19 @@ struct ToolQuickMenuView: View {
                 highlightedIndex = index
                 break
             }
+        }
+    }
+
+    @ViewBuilder
+    private func toolImage(for tool: ToolType) -> some View {
+        if tool.usesCustomImage {
+            Image(tool.iconName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 40, height: 40)
+        } else {
+            Image(systemName: tool.iconName)
+                .font(.system(size: 24))
         }
     }
 }

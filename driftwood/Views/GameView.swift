@@ -188,7 +188,7 @@ struct GameView: View {
                     SprintButtonView(isSprinting: $viewModel.player.isSprinting)
                 }
                 .padding(.trailing, 60)
-                .padding(.bottom, 20)
+                .padding(.bottom, 45)
             }
         }
     }

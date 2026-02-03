@@ -43,9 +43,7 @@ struct ItemsPageView: View {
                     .frame(width: 60, height: 60)
 
                 VStack(spacing: 4) {
-                    Image(systemName: gear.iconName)
-                        .font(.system(size: 24))
-                        .foregroundColor(isOwned ? .white : .gray.opacity(0.5))
+                    gearIcon(gear, isOwned: isOwned)
 
                     if gear == .motor {
                         Text(isOwned ? "Owned" : "Locked")
@@ -90,9 +88,7 @@ struct ItemsPageView: View {
                     .frame(width: 60, height: 60)
 
                 VStack(spacing: 4) {
-                    Image(systemName: tool.iconName)
-                        .font(.system(size: 24))
-                        .foregroundColor(isOwned ? .white : .gray.opacity(0.5))
+                    toolIcon(tool, isOwned: isOwned)
 
                     if tool == .wand {
                         Text(isOwned ? "Owned" : "Locked")
@@ -110,6 +106,36 @@ struct ItemsPageView: View {
                 .font(.system(size: 11))
                 .foregroundColor(.gray)
                 .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private func toolIcon(_ tool: ToolType, isOwned: Bool) -> some View {
+        if tool.usesCustomImage {
+            Image(tool.iconName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 32, height: 32)
+                .opacity(isOwned ? 1.0 : 0.5)
+        } else {
+            Image(systemName: tool.iconName)
+                .font(.system(size: 24))
+                .foregroundColor(isOwned ? .white : .gray.opacity(0.5))
+        }
+    }
+
+    @ViewBuilder
+    private func gearIcon(_ gear: GearType, isOwned: Bool) -> some View {
+        if gear.usesCustomImage {
+            Image(gear.iconName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: 32, height: 32)
+                .opacity(isOwned ? 1.0 : 0.5)
+        } else {
+            Image(systemName: gear.iconName)
+                .font(.system(size: 24))
+                .foregroundColor(isOwned ? .white : .gray.opacity(0.5))
         }
     }
 }

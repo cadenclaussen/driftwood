@@ -76,7 +76,7 @@ struct FishingLootTable {
         (.oldSet, 16),
         (.resource(.seaweed), 14),
         (.resource(.driftwood), 10),
-        (.resource(.rustyCoin), 5),
+        (.resource(.overgrownCoin), 5),
         (.resource(.sharkTooth), 5),
     ]
 
@@ -85,7 +85,7 @@ struct FishingLootTable {
         (.resource(.seaweed), 14),
         (.resource(.driftwood), 10),
         (.oldSet, 8),
-        (.resource(.rustyCoin), 5),
+        (.resource(.overgrownCoin), 5),
         (.resource(.sharkTooth), 5),
         (.resource(.scale), 4),
         (.resource(.brokenWheel), 4),
@@ -96,7 +96,7 @@ struct FishingLootTable {
         (.resource(.metalScrap), 10),
         (.oldSet, 8),
         (.resource(.seaweed), 8),
-        (.resource(.rustyCoin), 8),
+        (.resource(.overgrownCoin), 8),
         (.resource(.sharkTooth), 8),
         (.resource(.brokenWheel), 8),
     ]
@@ -105,7 +105,7 @@ struct FishingLootTable {
         (.resource(.commonFish), 50),
         (.oldSet, 8),
         (.resource(.seaweed), 8),
-        (.resource(.rustyCoin), 8),
+        (.resource(.overgrownCoin), 8),
         (.resource(.sharkTooth), 8),
         (.resource(.wire), 4),
         (.resource(.plastic), 4),
@@ -118,7 +118,7 @@ struct FishingLootTable {
         (.resource(.commonFish), 49.99),
         (.mossySet, 8),
         (.resource(.seaweed), 8),
-        (.resource(.rustyCoin), 8),
+        (.resource(.overgrownCoin), 8),
         (.resource(.sharkTooth), 8),
         (.oldSet, 4),
         (.resource(.wire), 4),
@@ -133,7 +133,7 @@ struct FishingLootTable {
         (.resource(.commonFish), 49.95),
         (.mossySet, 8),
         (.resource(.seaweed), 8),
-        (.resource(.rustyCoin), 8),
+        (.resource(.overgrownCoin), 8),
         (.resource(.sharkTooth), 8),
         (.oldSet, 4),
         (.treasureChest, 4),
@@ -148,7 +148,7 @@ struct FishingLootTable {
     private static let level10Table: [(item: LootItem, chance: Double)] = [
         (.resource(.commonFish), 45),
         (.resource(.seaweed), 8),
-        (.resource(.rustyCoin), 8),
+        (.resource(.overgrownCoin), 8),
         (.resource(.sharkTooth), 8),
         (.resource(.messageInBottle), 5),
         (.oldSet, 4),
@@ -177,7 +177,7 @@ struct FishingLootTable {
             return resolveArmorSet(.mossy, collected: collectedMossyPieces)
         case .treasureChest:
             let coins = rollTreasureChest()
-            return .resource(type: .rustyCoin, quantity: coins)
+            return .resource(type: .overgrownCoin, quantity: coins)
         }
     }
 
