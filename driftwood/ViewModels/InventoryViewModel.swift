@@ -9,14 +9,12 @@ import Combine
 enum InventoryPage: Int, CaseIterable {
     case items = 0
     case collectibles = 1
-    case crafting = 2
-    case character = 3
+    case character = 2
 
     var title: String {
         switch self {
         case .items: return "Items"
         case .collectibles: return "Collectibles"
-        case .crafting: return "Crafting"
         case .character: return "Character"
         }
     }
@@ -25,7 +23,6 @@ enum InventoryPage: Int, CaseIterable {
         switch self {
         case .items: return "wrench.and.screwdriver"
         case .collectibles: return "square.grid.3x3"
-        case .crafting: return "hammer"
         case .character: return "person"
         }
     }
@@ -55,6 +52,10 @@ class InventoryViewModel: ObservableObject {
     // MARK: - Add Item
 
     func addItem(_ content: SlotContent) -> Bool {
+        // track discovered resources for recipe unlocking
+        if case .resource(let type, _) = content {
+            inventory.discoveredResources.insert(type)
+        }
         if content.isMeal {
             return addMeal(content)
         }
@@ -272,6 +273,14 @@ class InventoryViewModel: ObservableObject {
         return total
     }
 
+    func isRecipeUnlocked(_ recipe: Recipe) -> Bool {
+        inventory.discoveredResources.contains(recipe.unlocksAfter)
+    }
+
+    var unlockedRecipes: [Recipe] {
+        Recipe.allRecipes.filter { isRecipeUnlocked($0) }
+    }
+
     func canCraft(_ recipe: Recipe) -> Bool {
         for material in recipe.materials {
             if materialCount(for: material.resource) < material.quantity {
@@ -289,6 +298,8 @@ class InventoryViewModel: ObservableObject {
             return hasEmptyResourceSlot()
         case .toolUpgrade(let tool, let tier):
             return inventory.tools.tier(for: tool) < tier
+        case .majorUpgrade(let upgrade):
+            return !inventory.majorUpgrades.has(upgrade)
         }
     }
 
@@ -304,6 +315,8 @@ class InventoryViewModel: ObservableObject {
             _ = addItem(content)
         case .toolUpgrade(let tool, let tier):
             inventory.tools.setTier(tier, for: tool)
+        case .majorUpgrade(let upgrade):
+            inventory.majorUpgrades.unlock(upgrade)
         }
 
         selectedRecipeId = nil

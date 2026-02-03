@@ -1,5 +1,38 @@
 # Tasks
 
+### 15. Combine collectibles and crafting tabs
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Views/Inventory/CollectiblesPageView.swift, InventoryViewModel.swift
+- **Requested**: Combine collectibles and crafting tabs into one view. Collectibles grid on the left, crafting menu on the right.
+- **Context**: Simplify inventory UI by merging related tabs
+- **Acceptance Criteria**:
+  - [x] Collectibles grid on left side (5 columns, 240px width)
+  - [x] Crafting recipes on right side (3 columns, 150px width)
+  - [x] Remove separate crafting tab
+  - [x] Detail panels still work for both (mutual exclusion)
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Rewrote CollectiblesPageView to use HStack with collectibles on left and crafting on right, separated by a divider. Reduced grid spacing and font sizes to fit. Added mutual exclusion so selecting a collectible clears recipe selection and vice versa. Removed crafting case from InventoryPage enum. Updated InventoryView switch statement. Deleted unused CraftingPageView.swift.
+
+### 14. Update crafting recipes and simplify item types
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Models/Recipe.swift, Models/ItemType.swift, docs/crafting-recipes.md
+- **Requested**: Create crafting recipes documentation and update code: 2 Driftwood => 1 Wood, 5 Seaweed => 1 Plant Fiber, 2 Plant Fibers => 1 String, 2 Wood + 1 String + 4 Shark Teeth => Sword (tier 1), 2 Wood + 1 String + 4 Shark Teeth => Axe (tier 1), 1 Broken Wheel + 1 Wood => Wheel, 4 String => 1 Cotton, 5 Cotton + 5 Metal Scraps => 1 Sail, 1 Sail + 1 Wheel + 20 Metal Scraps + 10 Wood => Sailboat. Also: Axe to 1 tier only, remove flippers/wings/pegasusBoots (keep sailboat), remove all GearType (sails, motor, pouch).
+- **Context**: Streamlining crafting progression and item types
+- **Acceptance Criteria**:
+  - [x] Create docs/crafting-recipes.md with all recipes
+  - [x] Add Plant Fiber, String, Cotton, Sail to ResourceType
+  - [x] Update Recipe.swift with all 9 recipes + unlock conditions
+  - [x] Change Axe maxTier to 1
+  - [x] Remove flippers, wings, pegasusBoots from MajorUpgradeType
+  - [x] Remove GearType enum entirely
+  - [x] Update any references to removed types
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created docs/crafting-recipes.md with full recipe documentation. Added plantFiber, string, cotton, sail to ResourceType with display names, icons, and rarities. Removed cloth from ResourceType. Updated Recipe.swift with 9 recipes (wood, plantFiber, string, cotton, sword, axe, wheel, sail, sailboat), added unlocksAfter field and majorUpgrade CraftResult case. Added discoveredResources tracking to Inventory for recipe unlocking. Added isRecipeUnlocked and unlockedRecipes to InventoryViewModel. Updated CraftingPageView to only show unlocked recipes. Changed axe maxTier to 1. Removed GearType enum, GearInventory struct, gear property from Inventory, and gearSection from ItemsPageView. Simplified MajorUpgradeType to only sailboat.
+
 ### 13. Implement crafting system
 - **Status**: COMPLETED
 - **Type**: Feature

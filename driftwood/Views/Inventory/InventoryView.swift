@@ -87,8 +87,6 @@ struct InventoryView: View {
             ItemsPageView(viewModel: viewModel)
         case .collectibles:
             CollectiblesPageView(viewModel: viewModel)
-        case .crafting:
-            CraftingPageView(viewModel: viewModel)
         case .character:
             CharacterPageView(viewModel: viewModel)
         }

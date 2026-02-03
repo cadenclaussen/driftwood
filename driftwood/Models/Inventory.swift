@@ -5,30 +5,6 @@
 
 import Foundation
 
-// MARK: - Gear Inventory
-
-struct GearInventory: Codable, Equatable {
-    var sailsTier: Int = 0 // 0-4
-    var hasMotor: Bool = false
-    var pouchTier: Int = 0 // 0-3
-
-    func tier(for gear: GearType) -> Int {
-        switch gear {
-        case .sails: return sailsTier
-        case .motor: return hasMotor ? 1 : 0
-        case .pouch: return pouchTier
-        }
-    }
-
-    mutating func setTier(_ tier: Int, for gear: GearType) {
-        switch gear {
-        case .sails: sailsTier = min(tier, 4)
-        case .motor: hasMotor = tier > 0
-        case .pouch: pouchTier = min(tier, 3)
-        }
-    }
-}
-
 // MARK: - Tool Inventory
 
 struct ToolInventory: Codable, Equatable {
@@ -50,7 +26,7 @@ struct ToolInventory: Codable, Equatable {
         switch tool {
         case .fishingRod: fishingRodTier = min(tier, 4)
         case .sword: swordTier = min(tier, 3)
-        case .axe: axeTier = min(tier, 3)
+        case .axe: axeTier = min(tier, 1)
         case .wand: hasWand = tier > 0
         }
     }
@@ -178,25 +154,16 @@ struct AccessorySlots: Codable, Equatable {
 
 struct MajorUpgrades: Codable, Equatable {
     var hasSailboat: Bool = false
-    var hasFlippers: Bool = false
-    var hasWings: Bool = false
-    var hasPegasusBoots: Bool = false
 
     func has(_ upgrade: MajorUpgradeType) -> Bool {
         switch upgrade {
         case .sailboat: return hasSailboat
-        case .flippers: return hasFlippers
-        case .wings: return hasWings
-        case .pegasusBoots: return hasPegasusBoots
         }
     }
 
     mutating func unlock(_ upgrade: MajorUpgradeType) {
         switch upgrade {
         case .sailboat: hasSailboat = true
-        case .flippers: hasFlippers = true
-        case .wings: hasWings = true
-        case .pegasusBoots: hasPegasusBoots = true
         }
     }
 }
@@ -204,24 +171,24 @@ struct MajorUpgrades: Codable, Equatable {
 // MARK: - Inventory
 
 struct Inventory: Codable, Equatable {
-    var gear: GearInventory
     var tools: ToolInventory
     var collectibles: [CollectibleSlot]
     var equipment: EquipmentSlots
     var accessories: AccessorySlots
     var majorUpgrades: MajorUpgrades
+    var discoveredResources: Set<ResourceType>
 
     static let mealSlotCount = 5
     static let totalSlotCount = 30
 
     static func empty() -> Inventory {
         Inventory(
-            gear: GearInventory(),
             tools: ToolInventory(),
             collectibles: (0..<totalSlotCount).map { _ in CollectibleSlot() },
             equipment: EquipmentSlots(),
             accessories: AccessorySlots(),
-            majorUpgrades: MajorUpgrades()
+            majorUpgrades: MajorUpgrades(),
+            discoveredResources: []
         )
     }
 
