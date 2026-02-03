@@ -287,8 +287,8 @@ class InventoryViewModel: ObservableObject {
                 return true
             }
             return hasEmptyResourceSlot()
-        case .toolUpgrade:
-            return true
+        case .toolUpgrade(let tool, let tier):
+            return inventory.tools.tier(for: tool) < tier
         }
     }
 
