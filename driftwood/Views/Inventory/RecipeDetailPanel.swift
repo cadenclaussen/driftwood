@@ -32,9 +32,16 @@ struct RecipeDetailPanel: View {
     private var headerRow: some View {
         HStack {
             recipeIcon
-            Text(recipe.name)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(recipe.name)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                if let count = viewModel.resultCount(for: recipe) {
+                    Text("Owned: \(count)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
+                }
+            }
             Spacer()
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")

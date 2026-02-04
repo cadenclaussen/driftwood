@@ -44,9 +44,15 @@ class InventoryViewModel: ObservableObject {
     @Published var selectedSlotIndex: Int?
     @Published var selectedRecipeId: String?
     @Published var sortMode: SortMode = .recent
+    @Published private(set) var cachedUnlockedRecipes: [Recipe] = []
 
     init(inventory: Inventory = .empty()) {
         self.inventory = inventory
+        updateCachedRecipes()
+    }
+
+    private func updateCachedRecipes() {
+        cachedUnlockedRecipes = Recipe.allRecipes.filter { isRecipeUnlocked($0) }
     }
 
     // MARK: - Add Item
@@ -54,7 +60,10 @@ class InventoryViewModel: ObservableObject {
     func addItem(_ content: SlotContent) -> Bool {
         // track discovered resources for recipe unlocking
         if case .resource(let type, _) = content {
-            inventory.discoveredResources.insert(type)
+            let isNew = inventory.discoveredResources.insert(type).inserted
+            if isNew {
+                updateCachedRecipes()
+            }
         }
         if content.isMeal {
             return addMeal(content)
@@ -278,7 +287,7 @@ class InventoryViewModel: ObservableObject {
     }
 
     var unlockedRecipes: [Recipe] {
-        Recipe.allRecipes.filter { isRecipeUnlocked($0) }
+        cachedUnlockedRecipes
     }
 
     func canCraft(_ recipe: Recipe) -> Bool {
@@ -319,8 +328,19 @@ class InventoryViewModel: ObservableObject {
             inventory.majorUpgrades.unlock(upgrade)
         }
 
-        selectedRecipeId = nil
         return true
+    }
+
+    func resultCount(for recipe: Recipe) -> Int? {
+        switch recipe.result {
+        case .collectible(let content):
+            if case .resource(let type, _) = content {
+                return materialCount(for: type)
+            }
+            return nil
+        case .toolUpgrade, .majorUpgrade:
+            return nil
+        }
     }
 
     private func consumeMaterial(_ resource: ResourceType, quantity: Int) {
