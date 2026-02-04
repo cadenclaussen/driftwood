@@ -262,6 +262,26 @@ class InventoryViewModel: ObservableObject {
         inventory.resourceSlots.contains { $0.isEmpty }
     }
 
+    func compactCollectibles() {
+        // compact meal slots (0 to mealSlotCount-1)
+        compactRange(start: 0, end: Inventory.mealSlotCount)
+        // compact resource slots (mealSlotCount to totalSlotCount-1)
+        compactRange(start: Inventory.mealSlotCount, end: Inventory.totalSlotCount)
+    }
+
+    private func compactRange(start: Int, end: Int) {
+        var writeIndex = start
+        for readIndex in start..<end {
+            if !inventory.collectibles[readIndex].isEmpty {
+                if writeIndex != readIndex {
+                    inventory.collectibles[writeIndex] = inventory.collectibles[readIndex]
+                    inventory.collectibles[readIndex].clear()
+                }
+                writeIndex += 1
+            }
+        }
+    }
+
     // MARK: - Crafting
 
     func selectRecipe(_ id: String?) {

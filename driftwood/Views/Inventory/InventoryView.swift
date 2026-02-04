@@ -38,6 +38,9 @@ struct InventoryView: View {
                 detailPanelOverlay(index: index, content: content)
             }
         }
+        .onAppear {
+            viewModel.compactCollectibles()
+        }
         .onDisappear {
             viewModel.clearRecipeSelection()
         }
