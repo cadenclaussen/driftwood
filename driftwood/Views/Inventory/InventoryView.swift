@@ -38,6 +38,9 @@ struct InventoryView: View {
                 detailPanelOverlay(index: index, content: content)
             }
         }
+        .onDisappear {
+            viewModel.clearRecipeSelection()
+        }
     }
 
     private var headerBar: some View {
