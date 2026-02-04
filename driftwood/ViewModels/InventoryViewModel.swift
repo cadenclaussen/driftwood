@@ -355,6 +355,9 @@ class InventoryViewModel: ObservableObject {
         switch recipe.result {
         case .collectible(let content):
             _ = addItem(content)
+            if !canCraft(recipe) {
+                selectedRecipeId = nil
+            }
         case .toolUpgrade(let tool, let tier):
             inventory.tools.setTier(tier, for: tool)
             selectedRecipeId = nil
