@@ -52,7 +52,20 @@ class InventoryViewModel: ObservableObject {
     }
 
     private func updateCachedRecipes() {
-        cachedUnlockedRecipes = Recipe.allRecipes.filter { isRecipeUnlocked($0) }
+        cachedUnlockedRecipes = Recipe.allRecipes.filter {
+            isRecipeUnlocked($0) && !isRecipeCompleted($0)
+        }
+    }
+
+    private func isRecipeCompleted(_ recipe: Recipe) -> Bool {
+        switch recipe.result {
+        case .toolUpgrade(let tool, let tier):
+            return inventory.tools.tier(for: tool) >= tier
+        case .majorUpgrade(let upgrade):
+            return inventory.majorUpgrades.has(upgrade)
+        case .collectible:
+            return false
+        }
     }
 
     // MARK: - Add Item
@@ -344,8 +357,12 @@ class InventoryViewModel: ObservableObject {
             _ = addItem(content)
         case .toolUpgrade(let tool, let tier):
             inventory.tools.setTier(tier, for: tool)
+            selectedRecipeId = nil
+            updateCachedRecipes()
         case .majorUpgrade(let upgrade):
             inventory.majorUpgrades.unlock(upgrade)
+            selectedRecipeId = nil
+            updateCachedRecipes()
         }
 
         return true
