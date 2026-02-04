@@ -52,6 +52,7 @@ class GameViewModel: ObservableObject {
 
         var player = Player(startPosition: profile.position.cgPoint)
         player.lookDirection = profile.lookDirection.cgPoint
+        player.facingDirection = profile.facingDirection ?? FacingDirection.from(direction: profile.lookDirection.cgPoint)
         player.health = profile.health
         player.stamina = profile.stamina
         player.magic = profile.magic
@@ -277,6 +278,7 @@ class GameViewModel: ObservableObject {
             x: joystickOffset.width / distance,
             y: joystickOffset.height / distance
         )
+        player.facingDirection = FacingDirection.from(direction: player.lookDirection)
 
         updateSwimmingState(previousPosition: previousPosition)
     }

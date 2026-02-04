@@ -34,7 +34,7 @@ struct GameView: View {
                 )
                 PlayerView(
                     size: viewModel.player.size,
-                    lookDirection: viewModel.player.lookDirection
+                    facingDirection: viewModel.player.facingDirection
                 )
                 .position(
                     x: pixelOffsetX + viewModel.player.position.x,
@@ -173,14 +173,11 @@ struct GameView: View {
 
                 // right side controls
                 VStack(spacing: 15) {
-                    // fish button (context-sensitive)
-                    if viewModel.canFish {
-                        FishButtonView(onTap: { viewModel.startFishing() })
-                    }
-
-                    // tool button
+                    // tool button (turns cyan when can fish)
                     ToolButtonView(
                         equippedTool: viewModel.player.equippedTool,
+                        canFish: viewModel.canFish,
+                        onTap: { viewModel.startFishing() },
                         onLongPress: { viewModel.openToolMenu() }
                     )
 

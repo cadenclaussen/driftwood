@@ -5,10 +5,35 @@
 
 import Foundation
 
+enum FacingDirection: String, Codable {
+    case up, down, left, right
+
+    var spriteName: String {
+        switch self {
+        case .up: return "PlayerUp"
+        case .down: return "PlayerDown"
+        case .left: return "PlayerLeft"
+        case .right: return "PlayerRight"
+        }
+    }
+
+    static func from(direction: CGPoint) -> FacingDirection {
+        // determine which direction has the largest component
+        let absX = abs(direction.x)
+        let absY = abs(direction.y)
+        if absX > absY {
+            return direction.x > 0 ? .right : .left
+        } else {
+            return direction.y > 0 ? .down : .up
+        }
+    }
+}
+
 struct Player {
     var position: CGPoint
-    var lookDirection: CGPoint = CGPoint(x: 1, y: 0) // unit vector, default looking right
-    let size: CGFloat = 12 // half of 24pt tile
+    var lookDirection: CGPoint = CGPoint(x: 0, y: 1) // unit vector, default looking down
+    var facingDirection: FacingDirection = .down
+    let size: CGFloat = 40
 
     // health system
     var health: Int = 5

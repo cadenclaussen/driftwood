@@ -26,6 +26,7 @@ struct SaveProfile: Codable, Identifiable {
     let id: Int // 0, 1, or 2
     var position: CodablePoint
     var lookDirection: CodablePoint
+    var facingDirection: FacingDirection?
     var health: Int
     var stamina: CGFloat
     var magic: CGFloat
@@ -43,7 +44,8 @@ struct SaveProfile: Codable, Identifiable {
         return SaveProfile(
             id: id,
             position: CodablePoint(x: centerX, y: centerY),
-            lookDirection: CodablePoint(x: 1, y: 0),
+            lookDirection: CodablePoint(x: 0, y: 1),
+            facingDirection: .down,
             health: 5,
             stamina: 100,
             magic: 100,
@@ -55,10 +57,11 @@ struct SaveProfile: Codable, Identifiable {
         )
     }
 
-    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil) {
+    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, facingDirection: FacingDirection? = .down, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil) {
         self.id = id
         self.position = position
         self.lookDirection = lookDirection
+        self.facingDirection = facingDirection
         self.health = health
         self.stamina = stamina
         self.magic = magic
@@ -73,6 +76,7 @@ struct SaveProfile: Codable, Identifiable {
         self.id = id
         self.position = CodablePoint(player.position)
         self.lookDirection = CodablePoint(player.lookDirection)
+        self.facingDirection = player.facingDirection
         self.health = player.health
         self.stamina = player.stamina
         self.magic = player.magic

@@ -7,14 +7,36 @@ import SwiftUI
 
 struct ToolButtonView: View {
     let equippedTool: ToolType?
+    let canFish: Bool
+    let onTap: () -> Void
     let onLongPress: () -> Void
 
     @State private var isPressed: Bool = false
 
+    private var backgroundColor: Color {
+        if isPressed {
+            return Color.blue.opacity(0.8)
+        }
+        if canFish {
+            return Color.cyan.opacity(0.7)
+        }
+        return Color.gray.opacity(0.7)
+    }
+
+    private var borderColor: Color {
+        if isPressed {
+            return Color.blue
+        }
+        if canFish {
+            return Color.cyan
+        }
+        return Color.black.opacity(0.3)
+    }
+
     var body: some View {
         ZStack {
             Circle()
-                .fill(isPressed ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7))
+                .fill(backgroundColor)
                 .frame(width: 60, height: 60)
 
             toolImage
@@ -22,8 +44,13 @@ struct ToolButtonView: View {
         }
         .overlay(
             Circle()
-                .stroke(isPressed ? Color.blue : Color.black.opacity(0.3), lineWidth: 2)
+                .stroke(borderColor, lineWidth: 2)
         )
+        .onTapGesture {
+            if canFish {
+                onTap()
+            }
+        }
         .gesture(
             LongPressGesture(minimumDuration: 0.3)
                 .onChanged { _ in
