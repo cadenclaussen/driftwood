@@ -241,23 +241,9 @@ class GameViewModel: ObservableObject {
 
         guard isMoving else { return }
 
-        // snap to cardinal direction (no diagonal movement)
-        let absX = abs(joystickOffset.width)
-        let absY = abs(joystickOffset.height)
-        let cardinalX: CGFloat
-        let cardinalY: CGFloat
-        if absX >= absY {
-            cardinalX = joystickOffset.width > 0 ? 1 : -1
-            cardinalY = 0
-        } else {
-            cardinalX = 0
-            cardinalY = joystickOffset.height > 0 ? 1 : -1
-        }
-
         let clampedDistance = min(distance, maxRadius)
-        let speedFactor = clampedDistance / maxRadius
-        let normalizedX = cardinalX * speedFactor
-        let normalizedY = cardinalY * speedFactor
+        let normalizedX = (joystickOffset.width / distance) * (clampedDistance / maxRadius)
+        let normalizedY = (joystickOffset.height / distance) * (clampedDistance / maxRadius)
 
         let speedMultiplier: CGFloat
         if player.isSwimming {
@@ -289,7 +275,10 @@ class GameViewModel: ObservableObject {
             }
         }
 
-        player.lookDirection = CGPoint(x: cardinalX, y: cardinalY)
+        player.lookDirection = CGPoint(
+            x: joystickOffset.width / distance,
+            y: joystickOffset.height / distance
+        )
         player.facingDirection = FacingDirection.from(direction: player.lookDirection)
 
         updateSwimmingState(previousPosition: previousPosition)
