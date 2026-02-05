@@ -236,13 +236,28 @@ class GameViewModel: ObservableObject {
         let distance = hypot(joystickOffset.width, joystickOffset.height)
         let isMoving = distance > 0
 
+        updateAttackAnimation(deltaTime: deltaTime)
         updateStamina(deltaTime: deltaTime, isMoving: isMoving)
 
         guard isMoving else { return }
 
+        // snap to cardinal direction (no diagonal movement)
+        let absX = abs(joystickOffset.width)
+        let absY = abs(joystickOffset.height)
+        let cardinalX: CGFloat
+        let cardinalY: CGFloat
+        if absX >= absY {
+            cardinalX = joystickOffset.width > 0 ? 1 : -1
+            cardinalY = 0
+        } else {
+            cardinalX = 0
+            cardinalY = joystickOffset.height > 0 ? 1 : -1
+        }
+
         let clampedDistance = min(distance, maxRadius)
-        let normalizedX = (joystickOffset.width / distance) * (clampedDistance / maxRadius)
-        let normalizedY = (joystickOffset.height / distance) * (clampedDistance / maxRadius)
+        let speedFactor = clampedDistance / maxRadius
+        let normalizedX = cardinalX * speedFactor
+        let normalizedY = cardinalY * speedFactor
 
         let speedMultiplier: CGFloat
         if player.isSwimming {
@@ -274,10 +289,7 @@ class GameViewModel: ObservableObject {
             }
         }
 
-        player.lookDirection = CGPoint(
-            x: joystickOffset.width / distance,
-            y: joystickOffset.height / distance
-        )
+        player.lookDirection = CGPoint(x: cardinalX, y: cardinalY)
         player.facingDirection = FacingDirection.from(direction: player.lookDirection)
 
         updateSwimmingState(previousPosition: previousPosition)
@@ -352,6 +364,56 @@ class GameViewModel: ObservableObject {
             tools.append(.wand)
         }
         return tools
+    }
+
+    // MARK: - Tool Actions
+
+    var canUseTool: Bool {
+        guard let tool = player.equippedTool else { return false }
+        if player.isAttacking { return false }
+        switch tool {
+        case .fishingRod:
+            return isNearWater() && !player.isSwimming
+        case .sword:
+            return inventoryViewModel.inventory.tools.swordTier > 0
+        case .axe, .wand:
+            return false // not yet implemented
+        }
+    }
+
+    func useTool() {
+        guard let tool = player.equippedTool else { return }
+        switch tool {
+        case .fishingRod:
+            startFishing()
+        case .sword:
+            startSwordSwing()
+        case .axe, .wand:
+            break // not yet implemented
+        }
+    }
+
+    // MARK: - Sword
+
+    func startSwordSwing() {
+        guard !player.isAttacking else { return }
+        player.isAttacking = true
+        player.attackAnimationFrame = 1
+        player.attackAnimationTime = 0
+    }
+
+    private func updateAttackAnimation(deltaTime: CGFloat) {
+        guard player.isAttacking else { return }
+
+        player.attackAnimationTime += deltaTime
+        let frameIndex = Int(player.attackAnimationTime / Player.attackFrameDuration) + 1
+        if frameIndex > Player.attackFrameCount {
+            player.isAttacking = false
+            player.attackAnimationFrame = 0
+            player.attackAnimationTime = 0
+        } else {
+            player.attackAnimationFrame = frameIndex
+        }
     }
 
     // MARK: - Fishing
