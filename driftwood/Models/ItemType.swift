@@ -119,7 +119,7 @@ enum ResourceType: String, Codable, CaseIterable {
     var iconName: String {
         switch self {
         case .wood: return "Wood"
-        case .metalScrap: return "gearshape"
+        case .metalScrap: return "MetalScrap"
         case .oil: return "drop.fill"
         case .plantFiber: return "PlantFiber"
         case .string: return "String"
@@ -150,7 +150,7 @@ enum ResourceType: String, Codable, CaseIterable {
 
     var usesCustomImage: Bool {
         switch self {
-        case .commonFish, .rareFish, .theOldOne, .wood, .driftwood, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .wheel, .sail, .plantFiber, .string, .cotton: return true
+        case .commonFish, .rareFish, .theOldOne, .wood, .driftwood, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .wheel, .sail, .plantFiber, .string, .cotton, .metalScrap: return true
         default: return false
         }
     }
