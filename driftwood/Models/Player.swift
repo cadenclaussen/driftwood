@@ -8,12 +8,28 @@ import Foundation
 enum FacingDirection: String, Codable {
     case up, down, left, right
 
-    var spriteName: String {
+    var idleSpriteName: String {
         switch self {
-        case .up: return "PlayerUp"
-        case .down: return "PlayerDown"
-        case .left: return "PlayerLeft"
-        case .right: return "PlayerRight"
+        case .up: return "LookUp"
+        case .down: return "LookDown"
+        case .left: return "LookLeft"
+        case .right: return "LookRight"
+        }
+    }
+
+    var walkSpriteName: String {
+        switch self {
+        case .up: return "WalkUp1"
+        case .down: return "WalkDown1"
+        case .left: return "WalkLeft1"
+        case .right: return "WalkRight1"
+        }
+    }
+
+    func attackSpriteName(frame: Int) -> String? {
+        switch self {
+        case .up: return "SwordSwingUp\(frame)"
+        case .down, .left, .right: return nil // not yet implemented
         }
     }
 
@@ -33,7 +49,7 @@ struct Player {
     var position: CGPoint
     var lookDirection: CGPoint = CGPoint(x: 0, y: 1) // unit vector, default looking down
     var facingDirection: FacingDirection = .down
-    let size: CGFloat = 40
+    let size: CGFloat = 32
 
     // health system
     var health: Int = 5
@@ -54,6 +70,16 @@ struct Player {
 
     // tools
     var equippedTool: ToolType? = nil
+
+    // walking state
+    var isWalking: Bool = false
+
+    // attack animation
+    var isAttacking: Bool = false
+    var attackAnimationFrame: Int = 0
+    var attackAnimationTime: CGFloat = 0
+    static let attackFrameDuration: CGFloat = 0.03 // 30ms per frame
+    static let attackFrameCount: Int = 12
 
     // swimming
     var isSwimming: Bool = false

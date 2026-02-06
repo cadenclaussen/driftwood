@@ -9,33 +9,85 @@ struct World {
     let width: Int
     let height: Int
     private(set) var tiles: [[TileType]]
+    let overlays: [WorldOverlay]
+    let groundSprites: [GroundSprite]
 
+    static let worldSize = 1000
     static let islandSize = 10
-    static let oceanPadding = 3
+
+    // island starts at this tile coordinate (centered in world)
+    static var islandOriginX: Int { (worldSize - islandSize) / 2 }
+    static var islandOriginY: Int { (worldSize - islandSize) / 2 }
+
+    // island center (player spawn point)
+    static var islandCenterX: Int { islandOriginX + islandSize / 2 }
+    static var islandCenterY: Int { islandOriginY + islandSize / 2 }
 
     init() {
-        let totalSize = World.islandSize + (World.oceanPadding * 2)
-        self.width = totalSize
-        self.height = totalSize
-        self.tiles = World.generateIsland(width: totalSize, height: totalSize)
+        self.width = World.worldSize
+        self.height = World.worldSize
+        let (tiles, overlays, groundSprites) = World.generateWorld()
+        self.tiles = tiles
+        self.overlays = overlays
+        self.groundSprites = groundSprites
+
+        let centerTile = self.tiles[World.islandCenterY][World.islandCenterX]
+        print("DEBUG World init: worldSize=\(World.worldSize), island origin=(\(World.islandOriginX), \(World.islandOriginY)), center=(\(World.islandCenterX),\(World.islandCenterY)), tile=\(centerTile)")
     }
 
-    static func generateIsland(width: Int, height: Int) -> [[TileType]] {
-        var tiles = Array(repeating: Array(repeating: TileType.ocean, count: width), count: height)
+    static func generateWorld() -> ([[TileType]], [WorldOverlay], [GroundSprite]) {
+        // start with all ocean
+        var tiles = Array(repeating: Array(repeating: TileType.ocean, count: worldSize), count: worldSize)
+        var overlays: [WorldOverlay] = []
+        var groundSprites: [GroundSprite] = []
 
         // place grass island in center
-        for y in oceanPadding..<(oceanPadding + islandSize) {
-            for x in oceanPadding..<(oceanPadding + islandSize) {
+        for y in islandOriginY..<(islandOriginY + islandSize) {
+            for x in islandOriginX..<(islandOriginX + islandSize) {
                 tiles[y][x] = .grass
             }
         }
 
         // add beach on left side of island
-        for y in oceanPadding..<(oceanPadding + islandSize) {
-            tiles[y][oceanPadding] = .beach
+        for y in islandOriginY..<(islandOriginY + islandSize) {
+            tiles[y][islandOriginX] = .beach
         }
 
-        return tiles
+        // add rock 3 tiles up from spawn
+        tiles[islandCenterY - 3][islandCenterX] = .rock
+
+        // add tree 3 tiles right of island center
+        // tree is 3 wide x 2 tall, trunk is center of bottom row
+        let trunkX = islandCenterX + 3
+        let trunkY = islandCenterY
+        addTree(at: trunkX, y: trunkY, tiles: &tiles, overlays: &overlays, groundSprites: &groundSprites)
+
+        return (tiles, overlays, groundSprites)
+    }
+
+    private static func addTree(at trunkX: Int, y trunkY: Int, tiles: inout [[TileType]], overlays: inout [WorldOverlay], groundSprites: inout [GroundSprite]) {
+        // All overlay assets are 2x2 tiles, trunk is a ground sprite
+        // Tree layout:
+        //   FTL  TOP  FTR   (top row, y = trunkY - 2)
+        //   FBL  TRK  FBR   (bottom row, y = trunkY)
+
+        // trunk collision (2x2 tiles)
+        for dy in 0..<2 {
+            for dx in 0..<2 {
+                tiles[trunkY + dy][trunkX + dx] = .rock
+            }
+        }
+
+        // trunk sprite renders on top of tiles but behind player
+        groundSprites.append(GroundSprite(x: trunkX, y: trunkY, spriteName: "Tree1Trunk", size: 2))
+
+        // top row overlays (2 tiles above trunk)
+        overlays.append(WorldOverlay(x: trunkX - 2, y: trunkY - 2, type: .tree1FlakeTopLeft))
+        overlays.append(WorldOverlay(x: trunkX, y: trunkY - 2, type: .tree1Top))
+        overlays.append(WorldOverlay(x: trunkX + 2, y: trunkY - 2, type: .tree1FlakeTopRight))
+        // bottom row overlays (left and right of trunk)
+        overlays.append(WorldOverlay(x: trunkX - 2, y: trunkY, type: .tree1FlakeBottomLeft))
+        overlays.append(WorldOverlay(x: trunkX + 2, y: trunkY, type: .tree1FlakeBottomRight))
     }
 
     func tile(at x: Int, y: Int) -> TileType {

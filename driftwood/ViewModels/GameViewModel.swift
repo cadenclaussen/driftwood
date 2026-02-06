@@ -236,6 +236,8 @@ class GameViewModel: ObservableObject {
         let distance = hypot(joystickOffset.width, joystickOffset.height)
         let isMoving = distance > 0
 
+        player.isWalking = isMoving
+
         updateAttackAnimation(deltaTime: deltaTime)
         updateStamina(deltaTime: deltaTime, isMoving: isMoving)
 
@@ -285,20 +287,23 @@ class GameViewModel: ObservableObject {
     }
 
     private func canMoveTo(_ position: CGPoint) -> Bool {
-        let radius = player.size / 2
-        let checkPoints = [
-            CGPoint(x: position.x - radius, y: position.y - radius),
-            CGPoint(x: position.x + radius, y: position.y - radius),
-            CGPoint(x: position.x - radius, y: position.y + radius),
-            CGPoint(x: position.x + radius, y: position.y + radius),
-        ]
+        // player hitbox: 24 wide x 32 tall (4 pixel margin on each side horizontally)
+        let halfWidth: CGFloat = 12
+        let halfHeight: CGFloat = 16
 
-        for point in checkPoints {
-            let tileX = Int(point.x / tileSize)
-            let tileY = Int(point.y / tileSize)
-            let tile = world.tile(at: tileX, y: tileY)
-            if !tile.isWalkable && !tile.isSwimmable {
-                return false
+        // get tile range that the player hitbox overlaps
+        let leftTile = Int(floor((position.x - halfWidth) / tileSize))
+        let rightTile = Int(floor((position.x + halfWidth - 0.01) / tileSize))
+        let topTile = Int(floor((position.y - halfHeight) / tileSize))
+        let bottomTile = Int(floor((position.y + halfHeight - 0.01) / tileSize))
+
+        // check all tiles the hitbox overlaps
+        for tileY in topTile...bottomTile {
+            for tileX in leftTile...rightTile {
+                let tile = world.tile(at: tileX, y: tileY)
+                if !tile.isWalkable && !tile.isSwimmable {
+                    return false
+                }
             }
         }
         return true

@@ -1,5 +1,64 @@
 # Tasks
 
+### 18. Implement tree with overlay depth sorting
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Tile.swift, World.swift, GameView.swift, Assets.xcassets
+- **Requested**: Create a tree on the home island using 6 32x32 assets. The tree is a 3x2 grid: top row (flake-top-left, top, flake-top-right), bottom row (flake-bottom-left, trunk, flake-bottom-right). The trunk is a solid tile that replaces the ground and blocks player movement. The other 5 pieces are overlays that render on top of the player when the player is "behind" them (y-position based depth sorting). Tree spawns 4 tiles to the right of island center. Scale all assets to fit exactly in one tile (32px → 24pt).
+- **Context**: First world decoration with depth-sorted overlays. Establishes pattern for future trees and objects.
+- **Acceptance Criteria**:
+  - [x] Add 6 imagesets to Assets.xcassets (Tree1Trunk, Tree1Top, Tree1FlakeTopLeft, etc.)
+  - [x] Trunk tile replaces ground tile and has solid collision
+  - [x] 5 overlay tiles render with depth sorting (on top of player when player.y < overlay.y)
+  - [x] Tree spawns 4 tiles right of island center
+  - [x] Assets scaled from 32px to 24pt tile size
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**:
+  - Created 6 imagesets in Assets.xcassets/PixelArt/ (Tree1Trunk, Tree1Top, Tree1FlakeTopLeft, Tree1FlakeTopRight, Tree1FlakeBottomLeft, Tree1FlakeBottomRight)
+  - Added treeTrunk to TileType enum with isWalkable=false, isSwimmable=false, and spriteName property
+  - Created OverlayType enum and WorldOverlay struct (Identifiable) in Tile.swift
+  - Updated World.swift: added overlays array, islandCenterX/Y computed properties, addTree() function that places trunk tile and 5 overlays
+  - Updated GameView.swift: TileView now renders sprite for tiles with spriteName, added overlaysLayer() function with depth sorting (behindPlayer parameter filters overlays based on playerTileY comparison)
+  - Depth sorting: overlays render behind player when playerTileY >= overlayY, in front when playerTileY < overlayY
+
+### 17. Implement 1000x1000 world with camera system
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: World.swift, GameView.swift, GameViewModel.swift, SaveProfile.swift, MiniMapView.swift
+- **Requested**: Implement extremely large world feature - 1000x1000 ocean with current island in the center. Screen must be centered around the character, and the camera tiles as the character moves.
+- **Context**: Major architectural change to support exploration. Current world is 16x16 tiles. Need camera following player and only rendering visible tiles for performance.
+- **Acceptance Criteria**:
+  - [x] World expanded to 1000x1000 tiles
+  - [x] Island centered at position ~500,500 in world
+  - [x] Camera follows player (screen centered on player)
+  - [x] Only visible tiles rendered (performance optimization)
+  - [x] Player can explore ocean in all directions
+  - [x] Minimap updated for larger world
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**:
+  - World.swift: Changed from 16x16 to 1000x1000 tiles. Replaced oceanPadding with worldSize=1000, islandOriginX/Y computed properties to center 10x10 island at tile (495,495).
+  - GameView.swift: Replaced static worldOffset centering with camera-based rendering. Camera is centered on player position. New cameraGrid() function calculates visible tile range based on player position and only renders tiles on screen. Uses pixel-level offset for smooth scrolling. Player always rendered at screen center.
+  - SaveProfile.swift: Updated empty() to spawn player at island center (tile 500,500) instead of old world center.
+  - MiniMapView.swift: Changed from rendering entire world to showing 50x50 tile region centered on player position (viewRadius=25), making it efficient for the larger world.
+  - SaveManager.swift: Added migrateProfilesToNewWorld() to automatically migrate old saves from the 16x16 world to the new 1000x1000 world center.
+
+### 16. Implement sword swing animation (upward direction)
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: PlayerView.swift, GameViewModel.swift, Player.swift, Assets.xcassets
+- **Requested**: Animate the swing of the sword for facing upwards direction. Ten frames provided (swing-sword-up-1.png through swing-sword-up-10.png). Animation plays when character has sword equipped and clicks the tool button.
+- **Context**: First sword attack animation, upward direction only for now
+- **Acceptance Criteria**:
+  - [x] Add 10 animation frames to asset catalog
+  - [x] Create animation system to cycle through frames
+  - [x] Trigger animation when tool button pressed with sword equipped
+  - [x] Animation plays for upward facing direction
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Added 10 SwordSwingUp imagesets (SwordSwingUp1-10) to Assets.xcassets. Added attack animation state to Player (isAttacking, attackAnimationFrame, attackAnimationTime). Added attackSpriteName(frame:) to FacingDirection (returns sprite name for up, nil for others). Updated PlayerView to show animation frame when attacking. Added startSwordSwing() and updateAttackAnimation() to GameViewModel with 50ms per frame timing. Generalized ToolButtonView to use canUseTool instead of canFish, and useTool() which routes to appropriate action based on equipped tool.
+
 ### 15. Combine collectibles and crafting tabs
 - **Status**: COMPLETED
 - **Type**: Feature

@@ -18,30 +18,69 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let screenTilesX = Int(ceil(geometry.size.width / tileSize)) + 1
-            let screenTilesY = Int(ceil(geometry.size.height / tileSize)) + 1
-            let worldOffsetX = (screenTilesX - viewModel.world.width) / 2
-            let worldOffsetY = (screenTilesY - viewModel.world.height) / 2
-            let pixelOffsetX = CGFloat(worldOffsetX) * tileSize
-            let pixelOffsetY = CGFloat(worldOffsetY) * tileSize
+            // camera is centered on player
+            let cameraX = viewModel.player.position.x
+            let cameraY = viewModel.player.position.y
+            let screenWidth = geometry.size.width
+            let screenHeight = geometry.size.height
+
+            // iPhone 16e landscape safe area insets (hardcoded since parent ignores safe area)
+            // tuned for rounded corners + notch + home indicator
+            let safeLeft: CGFloat = 15
+            let safeRight: CGFloat = 59
+            let safeTop: CGFloat = 0
+            let safeBottom: CGFloat = 60
+
+            // calculate visible tile range (add 1 tile buffer on each side)
+            let screenTilesX = Int(ceil(screenWidth / tileSize)) + 2
+            let screenTilesY = Int(ceil(screenHeight / tileSize)) + 2
 
             ZStack(alignment: .topLeading) {
-                unifiedGrid(
+                cameraGrid(
                     screenTilesX: screenTilesX,
                     screenTilesY: screenTilesY,
-                    worldOffsetX: worldOffsetX,
-                    worldOffsetY: worldOffsetY
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
                 )
+                // ground sprites (always behind player, like tiles)
+                groundSpritesLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // overlays not overlapping player (behind)
+                overlaysLayer(
+                    overlapping: false,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // player is always at screen center
                 PlayerView(
                     size: viewModel.player.size,
-                    facingDirection: viewModel.player.facingDirection
+                    facingDirection: viewModel.player.facingDirection,
+                    isWalking: viewModel.player.isWalking,
+                    isAttacking: viewModel.player.isAttacking,
+                    attackFrame: viewModel.player.attackAnimationFrame
                 )
                 .position(
-                    x: pixelOffsetX + viewModel.player.position.x,
-                    y: pixelOffsetY + viewModel.player.position.y
+                    x: screenWidth / 2,
+                    y: screenHeight / 2
                 )
-                hudLayer
-                controlsLayer
+                // overlays overlapping player (on top)
+                overlaysLayer(
+                    overlapping: true,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                hudLayer(safeLeft: safeLeft, safeTop: safeTop)
+                controlsLayer(safeLeft: safeLeft, safeRight: safeRight, safeBottom: safeBottom)
                 Color.black
                     .opacity(viewModel.screenFadeOpacity)
                     .ignoresSafeArea()
@@ -111,28 +150,117 @@ struct GameView: View {
         .onDisappear { viewModel.stopGameLoop() }
     }
 
-    private func unifiedGrid(
+    private func cameraGrid(
         screenTilesX: Int,
         screenTilesY: Int,
-        worldOffsetX: Int,
-        worldOffsetY: Int
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
     ) -> some View {
-        VStack(spacing: 0) {
+        // calculate the top-left world tile visible on screen
+        let cameraTileX = Int(floor(cameraX / tileSize))
+        let cameraTileY = Int(floor(cameraY / tileSize))
+        let startTileX = cameraTileX - screenTilesX / 2
+        let startTileY = cameraTileY - screenTilesY / 2
+
+        let _ = print("DEBUG cameraGrid: camera=(\(Int(cameraX)), \(Int(cameraY))), cameraTile=(\(cameraTileX), \(cameraTileY))")
+
+        // calculate pixel offset for smooth scrolling
+        let tileOffsetX = cameraX.truncatingRemainder(dividingBy: tileSize)
+        let tileOffsetY = cameraY.truncatingRemainder(dividingBy: tileSize)
+        let gridOffsetX = screenWidth / 2 - tileOffsetX - CGFloat(screenTilesX / 2) * tileSize
+        let gridOffsetY = screenHeight / 2 - tileOffsetY - CGFloat(screenTilesY / 2) * tileSize
+
+        return VStack(spacing: 0) {
             ForEach(0..<screenTilesY, id: \.self) { screenY in
                 HStack(spacing: 0) {
                     ForEach(0..<screenTilesX, id: \.self) { screenX in
-                        let worldX = screenX - worldOffsetX
-                        let worldY = screenY - worldOffsetY
+                        let worldX = startTileX + screenX
+                        let worldY = startTileY + screenY
                         let tileType = viewModel.world.tile(at: worldX, y: worldY)
                         TileView(type: tileType, size: tileSize)
                     }
                 }
             }
         }
+        .offset(x: gridOffsetX, y: gridOffsetY)
     }
 
-    private var hudLayer: some View {
-        VStack {
+    private func groundSpritesLayer(
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        return ZStack {
+            ForEach(viewModel.world.groundSprites) { sprite in
+                let spriteSize = tileSize * CGFloat(sprite.size)
+                let spritePixelX = CGFloat(sprite.x) * tileSize + spriteSize / 2
+                let spritePixelY = CGFloat(sprite.y) * tileSize + spriteSize / 2
+                let screenX = screenWidth / 2 + (spritePixelX - cameraX)
+                let screenY = screenHeight / 2 + (spritePixelY - cameraY)
+
+                Image(sprite.spriteName)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: spriteSize, height: spriteSize)
+                    .position(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    private func overlaysLayer(
+        overlapping: Bool,
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        // player bounds in tile coordinates
+        let playerLeft = Int(floor((viewModel.player.position.x - viewModel.player.size / 2) / tileSize))
+        let playerRight = Int(floor((viewModel.player.position.x + viewModel.player.size / 2) / tileSize))
+        let playerTop = Int(floor((viewModel.player.position.y - viewModel.player.size / 2) / tileSize))
+        let playerBottom = Int(floor((viewModel.player.position.y + viewModel.player.size / 2) / tileSize))
+
+        // filter overlays based on overlap with player
+        let filteredOverlays = viewModel.world.overlays.filter { overlay in
+            // overlay covers tiles from (x, y) to (x + size - 1, y + size - 1)
+            let overlayLeft = overlay.x
+            let overlayRight = overlay.x + overlay.size - 1
+            let overlayTop = overlay.y
+            let overlayBottom = overlay.y + overlay.size - 1
+
+            // check if player overlaps with overlay
+            let hasOverlap = playerRight >= overlayLeft && playerLeft <= overlayRight &&
+                             playerBottom >= overlayTop && playerTop <= overlayBottom
+
+            return overlapping ? hasOverlap : !hasOverlap
+        }
+
+        // overlay size: 2x2 tiles
+        let overlaySize = tileSize * 2
+
+        return ZStack {
+            ForEach(filteredOverlays) { overlay in
+                // position at center of 2x2 overlay
+                let overlayPixelX = CGFloat(overlay.x) * tileSize + overlaySize / 2
+                let overlayPixelY = CGFloat(overlay.y) * tileSize + overlaySize / 2
+                let screenX = screenWidth / 2 + (overlayPixelX - cameraX)
+                let screenY = screenHeight / 2 + (overlayPixelY - cameraY)
+
+                Image(overlay.type.spriteName)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: overlaySize, height: overlaySize)
+                    .position(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    private func hudLayer(safeLeft: CGFloat, safeTop: CGFloat) -> some View {
+        let buffer: CGFloat = 16
+        return VStack {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
                     HeartsView(
@@ -148,44 +276,48 @@ struct GameView: View {
                         maxMagic: viewModel.player.maxMagic
                     )
                 }
-                .padding(16)
+                .padding(.leading, safeLeft + buffer)
+                .padding(.top, safeTop + buffer)
                 Spacer()
             }
             Spacer()
         }
     }
 
-    private var controlsLayer: some View {
-        VStack {
-            HStack {
+    private func controlsLayer(safeLeft: CGFloat, safeRight: CGFloat, safeBottom: CGFloat) -> some View {
+        let buffer: CGFloat = 16
+
+        return VStack {
+            HStack(spacing: 12) {
                 Spacer()
                 InventoryButton(onTap: { viewModel.openInventory() })
-                    .padding(.trailing, 60)
-                    .padding(.top, 40)
+                MenuButton(onTap: { viewModel.returnToMainMenu() })
             }
+            .padding(.trailing, safeRight + buffer)
+            .padding(.top, buffer)
             Spacer()
             HStack(alignment: .bottom) {
                 JoystickView(offset: $viewModel.joystickOffset)
-                    .padding(.leading, 20)
-                    .padding(.bottom, 50)
+                    .padding(.leading, safeLeft + buffer)
+                    .padding(.bottom, safeBottom + buffer)
 
                 Spacer()
 
                 // right side controls
                 VStack(spacing: 15) {
-                    // tool button (turns cyan when can fish)
+                    // tool button (turns cyan when can use equipped tool)
                     ToolButtonView(
                         equippedTool: viewModel.player.equippedTool,
-                        canFish: viewModel.canFish,
-                        onTap: { viewModel.startFishing() },
+                        canUseTool: viewModel.canUseTool,
+                        onTap: { viewModel.useTool() },
                         onLongPress: { viewModel.openToolMenu() }
                     )
 
                     // sprint button
                     SprintButtonView(isSprinting: $viewModel.player.isSprinting)
                 }
-                .padding(.trailing, 60)
-                .padding(.bottom, 45)
+                .padding(.trailing, safeRight + buffer)
+                .padding(.bottom, safeBottom + buffer)
             }
         }
     }
@@ -261,6 +393,5 @@ struct TileView: View {
         Rectangle()
             .fill(type.color)
             .frame(width: size, height: size)
-            .border(Color.black.opacity(0.1), width: 0.5)
     }
 }
