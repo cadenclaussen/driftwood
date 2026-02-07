@@ -51,6 +51,13 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
+                // rock overlays (ground level, behind player)
+                rockOverlaysLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
                 // overlays not overlapping player (behind)
                 overlaysLayer(
                     overlapping: false,
@@ -205,6 +212,30 @@ struct GameView: View {
                     .interpolation(.none)
                     .resizable()
                     .frame(width: spriteSize, height: spriteSize)
+                    .position(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    private func rockOverlaysLayer(
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        let rockSize = tileSize * 2  // rocks are 2x2 tiles
+        return ZStack {
+            ForEach(viewModel.world.rockOverlays) { rock in
+                // rock is 2x2 tiles, anchored at top-left tile position
+                let rockPixelX = CGFloat(rock.x) * tileSize + rockSize / 2
+                let rockPixelY = CGFloat(rock.y) * tileSize + rockSize / 2
+                let screenX = screenWidth / 2 + (rockPixelX - cameraX)
+                let screenY = screenHeight / 2 + (rockPixelY - cameraY)
+
+                Image(rock.type.spriteName)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: rockSize, height: rockSize)
                     .position(x: screenX, y: screenY)
             }
         }

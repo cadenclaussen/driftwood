@@ -306,6 +306,21 @@ class GameViewModel: ObservableObject {
                 }
             }
         }
+
+        // check rock collision bounds
+        let playerRect = CGRect(
+            x: position.x - halfWidth,
+            y: position.y - halfHeight,
+            width: halfWidth * 2,
+            height: halfHeight * 2
+        )
+        for rock in world.rockOverlays {
+            let rockRect = rock.collisionRect(tileSize: tileSize)
+            if playerRect.intersects(rockRect) {
+                return false
+            }
+        }
+
         return true
     }
 

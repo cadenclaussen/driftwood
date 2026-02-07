@@ -1,5 +1,21 @@
 # Tasks
 
+### 19. Implement rock sprites with collision
+- **Status**: IN_PROGRESS
+- **Type**: Feature
+- **Location**: Tile.swift, World.swift, GameView.swift, Assets.xcassets
+- **Requested**: Add rock sprites as tile overlays with collision. 4 small rocks, 3 medium rocks, 1 large rock (2 tiles: left/right). Rocks overlay existing tiles (like grass) but block player movement. Each rock type has custom collision bounds (pixel offsets from 32px tile edges). Test by placing one small-1, one mid-1, and one large rock on the island.
+- **Context**: Second world decoration type. Unlike trees, rocks are ground-level obstacles without depth sorting - they just overlay tiles and block movement with partial collision bounds.
+- **Acceptance Criteria**:
+  - [ ] Add 9 imagesets to Assets.xcassets (RockSmall1-4, RockMid1-3, RockBigLeft, RockBigRight)
+  - [ ] Create rock overlay system with custom collision bounds per rock type
+  - [ ] Collision bounds use pixel offsets: small-1 (L6,R5,B3,T12), small-2 (L10,R1,B12,T3), small-3 (L2,R9,B9,T6), small-4 (L2,R9,B2,T13), mid-1 (L2,R4,B2,T12), mid-2 (L4,R2,B10,T4), mid-3 (L1,R5,B8,T6), large combined (L12,R12,B6,T5)
+  - [ ] Place test rocks on island (one small-1, one mid-1, one large)
+  - [ ] Player blocked by rock collision bounds
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: TBD
+
 ### 18. Implement tree with overlay depth sorting
 - **Status**: COMPLETED
 - **Type**: Feature
