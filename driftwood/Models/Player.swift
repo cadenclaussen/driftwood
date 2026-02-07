@@ -88,6 +88,10 @@ struct Player {
     let swimStaminaDrainRate: CGFloat = 12 // base drain while swimming
     let swimSprintStaminaDrainRate: CGFloat = 25 // drain while sprint-swimming
 
+    // sailing
+    var isSailing: Bool = false
+    let sailingSpeedMultiplier: CGFloat = 3.0 // 3x swim speed = 1.5x walk speed
+
     init(startPosition: CGPoint) {
         self.position = startPosition
     }

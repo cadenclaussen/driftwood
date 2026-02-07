@@ -53,6 +53,7 @@ enum ToolType: String, Codable, CaseIterable {
 enum ResourceType: String, Codable, CaseIterable {
     // general
     case wood
+    case stone
     case metalScrap
     case oil
 
@@ -66,7 +67,6 @@ enum ResourceType: String, Codable, CaseIterable {
     case commonFish
     case rareFish
     case rainbowFish
-    case driftwood
     case seaweed
     case overgrownCoin
     case sharkTooth
@@ -87,6 +87,7 @@ enum ResourceType: String, Codable, CaseIterable {
     var displayName: String {
         switch self {
         case .wood: return "Wood"
+        case .stone: return "Stone"
         case .metalScrap: return "Metal Scrap"
         case .oil: return "Oil"
         case .plantFiber: return "Plant Fiber"
@@ -96,7 +97,6 @@ enum ResourceType: String, Codable, CaseIterable {
         case .commonFish: return "Fish"
         case .rareFish: return "Rare Fish"
         case .rainbowFish: return "Rainbow Fish"
-        case .driftwood: return "Driftwood"
         case .seaweed: return "Seaweed"
         case .overgrownCoin: return "Overgrown Coin"
         case .sharkTooth: return "Shark Tooth"
@@ -119,6 +119,7 @@ enum ResourceType: String, Codable, CaseIterable {
     var iconName: String {
         switch self {
         case .wood: return "Wood"
+        case .stone: return "Stone"
         case .metalScrap: return "MetalScrap"
         case .oil: return "drop.fill"
         case .plantFiber: return "PlantFiber"
@@ -128,7 +129,6 @@ enum ResourceType: String, Codable, CaseIterable {
         case .commonFish: return "Fish"
         case .rareFish: return "Fish"
         case .rainbowFish: return "sparkles"
-        case .driftwood: return "Wood"
         case .seaweed: return "Seaweed"
         case .overgrownCoin: return "OvergrownCoin"
         case .sharkTooth: return "SharkTooth"
@@ -150,7 +150,7 @@ enum ResourceType: String, Codable, CaseIterable {
 
     var usesCustomImage: Bool {
         switch self {
-        case .commonFish, .rareFish, .theOldOne, .wood, .driftwood, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .wheel, .sail, .plantFiber, .string, .cotton, .metalScrap: return true
+        case .commonFish, .rareFish, .theOldOne, .wood, .stone, .seaweed, .leatherScrap, .overgrownCoin, .sharkTooth, .scale, .brokenWheel, .wheel, .sail, .plantFiber, .string, .cotton, .metalScrap: return true
         default: return false
         }
     }
@@ -159,7 +159,7 @@ enum ResourceType: String, Codable, CaseIterable {
 
     var rarity: ItemRarity {
         switch self {
-        case .wood, .driftwood, .seaweed, .leatherScrap, .commonFish, .plantFiber, .string:
+        case .wood, .stone, .seaweed, .leatherScrap, .commonFish, .plantFiber, .string:
             return .common
         case .metalScrap, .oil, .overgrownCoin, .sharkTooth, .scale, .wire, .plastic, .cotton:
             return .uncommon
@@ -337,7 +337,13 @@ enum MajorUpgradeType: String, Codable, CaseIterable {
 
     var iconName: String {
         switch self {
-        case .sailboat: return "sailboat"
+        case .sailboat: return "Sailboat"
+        }
+    }
+
+    var usesCustomImage: Bool {
+        switch self {
+        case .sailboat: return true
         }
     }
 }

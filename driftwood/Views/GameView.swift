@@ -66,18 +66,34 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
-                // player is always at screen center
-                PlayerView(
-                    size: viewModel.player.size,
-                    facingDirection: viewModel.player.facingDirection,
-                    isWalking: viewModel.player.isWalking,
-                    isAttacking: viewModel.player.isAttacking,
-                    attackFrame: viewModel.player.attackAnimationFrame
-                )
-                .position(
-                    x: screenWidth / 2,
-                    y: screenHeight / 2
-                )
+                // sailboat in world (when not sailing, show at its position)
+                if let boat = viewModel.sailboat, !viewModel.player.isSailing {
+                    SailboatView()
+                        .position(
+                            x: screenWidth / 2 + (boat.position.x - cameraX),
+                            y: screenHeight / 2 + (boat.position.y - cameraY)
+                        )
+                }
+                // player or sailboat at screen center
+                if viewModel.player.isSailing {
+                    SailboatView()
+                        .position(
+                            x: screenWidth / 2,
+                            y: screenHeight / 2
+                        )
+                } else {
+                    PlayerView(
+                        size: viewModel.player.size,
+                        facingDirection: viewModel.player.facingDirection,
+                        isWalking: viewModel.player.isWalking,
+                        isAttacking: viewModel.player.isAttacking,
+                        attackFrame: viewModel.player.attackAnimationFrame
+                    )
+                    .position(
+                        x: screenWidth / 2,
+                        y: screenHeight / 2
+                    )
+                }
                 // overlays overlapping player (on top)
                 overlaysLayer(
                     overlapping: true,
@@ -86,7 +102,7 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
-                hudLayer(safeLeft: safeLeft, safeTop: safeTop)
+                hudLayer(safeLeft: safeLeft, safeRight: safeRight, safeTop: safeTop)
                 controlsLayer(safeLeft: safeLeft, safeRight: safeRight, safeBottom: safeBottom)
                 Color.black
                     .opacity(viewModel.screenFadeOpacity)
@@ -289,7 +305,7 @@ struct GameView: View {
         }
     }
 
-    private func hudLayer(safeLeft: CGFloat, safeTop: CGFloat) -> some View {
+    private func hudLayer(safeLeft: CGFloat, safeRight: CGFloat, safeTop: CGFloat) -> some View {
         let buffer: CGFloat = 16
         return VStack {
             HStack {
@@ -310,6 +326,12 @@ struct GameView: View {
                 .padding(.leading, safeLeft + buffer)
                 .padding(.top, safeTop + buffer)
                 Spacer()
+                // wind arrow (only when sailing)
+                if viewModel.player.isSailing {
+                    WindArrowView(windAngle: viewModel.sailingState.windAngle)
+                        .padding(.trailing, safeRight + buffer)
+                        .padding(.top, safeTop + buffer + 50)
+                }
             }
             Spacer()
         }
@@ -327,6 +349,17 @@ struct GameView: View {
             .padding(.trailing, safeRight + buffer)
             .padding(.top, buffer)
             Spacer()
+            // sailboat prompts (centered above controls)
+            if viewModel.canSummonSailboat {
+                SailboatPromptView(promptType: .summon, onTap: { viewModel.summonSailboat() })
+                    .padding(.bottom, 8)
+            } else if viewModel.isNearSailboat {
+                SailboatPromptView(promptType: .board, onTap: { viewModel.boardSailboat() })
+                    .padding(.bottom, 8)
+            } else if viewModel.isNearLandWhileSailing {
+                SailboatPromptView(promptType: .disembark, onTap: { viewModel.disembark() })
+                    .padding(.bottom, 8)
+            }
             HStack(alignment: .bottom) {
                 JoystickView(offset: $viewModel.joystickOffset)
                     .padding(.leading, safeLeft + buffer)
@@ -337,15 +370,19 @@ struct GameView: View {
                 // right side controls
                 VStack(spacing: 15) {
                     // tool button (turns cyan when can use equipped tool)
-                    ToolButtonView(
-                        equippedTool: viewModel.player.equippedTool,
-                        canUseTool: viewModel.canUseTool,
-                        onTap: { viewModel.useTool() },
-                        onLongPress: { viewModel.openToolMenu() }
-                    )
+                    if !viewModel.player.isSailing {
+                        ToolButtonView(
+                            equippedTool: viewModel.player.equippedTool,
+                            canUseTool: viewModel.canUseTool,
+                            onTap: { viewModel.useTool() },
+                            onLongPress: { viewModel.openToolMenu() }
+                        )
+                    }
 
-                    // sprint button
-                    SprintButtonView(isSprinting: $viewModel.player.isSprinting)
+                    // sprint button (hidden while sailing)
+                    if !viewModel.player.isSailing {
+                        SprintButtonView(isSprinting: $viewModel.player.isSprinting)
+                    }
                 }
                 .padding(.trailing, safeRight + buffer)
                 .padding(.bottom, safeBottom + buffer)

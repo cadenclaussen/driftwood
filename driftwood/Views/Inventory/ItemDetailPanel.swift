@@ -15,6 +15,7 @@ struct ItemDetailPanel: View {
     let onJunk: () -> Void
     let onDrop: () -> Void
     let onClose: () -> Void
+    let onAdd: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 12) {
@@ -169,6 +170,10 @@ struct ItemDetailPanel: View {
 
             if let onEquip = onEquip, content.isEquippable {
                 actionButton(title: "Equip", icon: "square.and.arrow.down", color: .blue, action: onEquip)
+            }
+
+            if let onAdd = onAdd, content.isResource {
+                actionButton(title: "Add", icon: "plus", color: .green, action: onAdd)
             }
 
             actionButton(

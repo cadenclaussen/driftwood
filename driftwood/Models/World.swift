@@ -27,7 +27,7 @@ struct World {
     init() {
         self.width = World.worldSize
         self.height = World.worldSize
-        let (tiles, overlays, groundSprites, rockOverlays) = World.generateWorld()
+        let (tiles, overlays, groundSprites, rockOverlays) = World.generateWorld()s
         self.tiles = tiles
         self.overlays = overlays
         self.groundSprites = groundSprites

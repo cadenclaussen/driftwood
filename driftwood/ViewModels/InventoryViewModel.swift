@@ -68,6 +68,12 @@ class InventoryViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Debug
+
+    func debugAddResource(_ type: ResourceType) {
+        _ = addItem(.resource(type: type, quantity: 1))
+    }
+
     // MARK: - Add Item
 
     func addItem(_ content: SlotContent) -> Bool {

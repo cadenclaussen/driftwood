@@ -49,12 +49,56 @@
   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
   ```
 
+## iPhone 16e Screen & Safe Area Guidelines
+
+The target device is iPhone 16e. All UI elements MUST be positioned within safe areas.
+
+### Screen Specifications
+- Screen size: 6.1" diagonal
+- Resolution: 2532 x 1170 pixels
+- Viewport: 844 x 390 points (landscape)
+- Scale factor: 3x
+- Display type: Notch (not Dynamic Island)
+
+### Safe Area Insets (Landscape)
+- Left/Right (notch side): ~47 points
+- Bottom (home indicator): ~21 points
+- Top: ~0 points (in landscape)
+
+### UI Positioning Rules
+1. NEVER use hardcoded padding that ignores safe areas
+2. SwiftUI respects safe areas by default - don't use `.ignoresSafeArea()` on interactive elements
+3. Add a 16pt buffer INSIDE the safe area for comfortable button tapping
+4. Button edges (not just centers) must be fully visible and tappable
+5. Test button positions in landscape orientation on iPhone 16e simulator
+
+### Example - Correct Button Positioning
+```swift
+// Good: padding inside safe area
+VStack {
+    HStack {
+        Spacer()
+        Button("Menu") { }
+    }
+    .padding(.trailing, 16)  // buffer inside safe area
+    .padding(.top, 16)
+    Spacer()
+}
+// Safe area is automatically respected
+```
+
+### Common Mistakes to Avoid
+- Using large hardcoded padding (e.g., 60pt) assuming it accounts for safe area
+- Placing buttons at exact screen edges without buffer
+- Not testing in landscape orientation
+- Using `.ignoresSafeArea()` on the entire view including controls
+
 ## Game Design: Driftwood Kingdom
 
 - **Genre**: 2D top-down adventure (Zelda-like)
 - **Art Style**: Pixel art (Minecraft-inspired)
 - **Setting**: Cute island with beach, forest, trees, surrounded by ocean
-- **World Size**: Starting at 10x10 tile grid
+- **World Size**: 1000x1000 tile ocean with 10x10 island at center
 - **Players**: Single-player with 3 save profiles (for sharing device with friends)
 
 ## iOS App Development

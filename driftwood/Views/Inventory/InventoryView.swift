@@ -113,7 +113,8 @@ struct InventoryView: View {
                 viewModel.removeItem(at: index)
                 viewModel.clearSelection()
             },
-            onClose: { viewModel.clearSelection() }
+            onClose: { viewModel.clearSelection() },
+            onAdd: content.resourceType.map { type in { viewModel.debugAddResource(type) } }
         )
         .transition(.scale.combined(with: .opacity))
     }

@@ -103,6 +103,16 @@ enum SlotContent: Codable, Equatable {
         return false
     }
 
+    var isResource: Bool {
+        if case .resource = self { return true }
+        return false
+    }
+
+    var resourceType: ResourceType? {
+        if case .resource(let type, _) = self { return type }
+        return nil
+    }
+
     func canStack(with other: SlotContent) -> Bool {
         guard isStackable else { return false }
         if case .resource(let myType, let myQty) = self,

@@ -35,12 +35,16 @@ struct SaveProfile: Codable, Identifiable {
     var inventory: Inventory
     var fishingState: FishingState
     var equippedTool: ToolType?
+    var sailboatPosition: CodablePoint?
+    var isSailing: Bool
 
     static func empty(id: Int) -> SaveProfile {
         let tileSize: CGFloat = 24
-        let totalSize = World.islandSize + (World.oceanPadding * 2)
-        let centerX = CGFloat(totalSize) * tileSize / 2
-        let centerY = CGFloat(totalSize) * tileSize / 2
+        // spawn at center of island (which is centered in world)
+        let islandCenterTileX = CGFloat(World.islandOriginX) + CGFloat(World.islandSize) / 2
+        let islandCenterTileY = CGFloat(World.islandOriginY) + CGFloat(World.islandSize) / 2
+        let centerX = islandCenterTileX * tileSize
+        let centerY = islandCenterTileY * tileSize
         return SaveProfile(
             id: id,
             position: CodablePoint(x: centerX, y: centerY),
@@ -53,11 +57,13 @@ struct SaveProfile: Codable, Identifiable {
             lastPlayed: nil,
             inventory: .empty(),
             fishingState: FishingState(),
-            equippedTool: nil
+            equippedTool: nil,
+            sailboatPosition: nil,
+            isSailing: false
         )
     }
 
-    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, facingDirection: FacingDirection? = .down, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil) {
+    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, facingDirection: FacingDirection? = .down, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil, sailboatPosition: CodablePoint? = nil, isSailing: Bool = false) {
         self.id = id
         self.position = position
         self.lookDirection = lookDirection
@@ -70,9 +76,11 @@ struct SaveProfile: Codable, Identifiable {
         self.inventory = inventory
         self.fishingState = fishingState
         self.equippedTool = equippedTool
+        self.sailboatPosition = sailboatPosition
+        self.isSailing = isSailing
     }
 
-    init(from player: Player, id: Int, inventory: Inventory, fishingState: FishingState, equippedTool: ToolType?) {
+    init(from player: Player, id: Int, inventory: Inventory, fishingState: FishingState, equippedTool: ToolType?, sailboatPosition: CodablePoint? = nil) {
         self.id = id
         self.position = CodablePoint(player.position)
         self.lookDirection = CodablePoint(player.lookDirection)
@@ -85,5 +93,7 @@ struct SaveProfile: Codable, Identifiable {
         self.inventory = inventory
         self.fishingState = fishingState
         self.equippedTool = equippedTool
+        self.sailboatPosition = sailboatPosition
+        self.isSailing = player.isSailing
     }
 }

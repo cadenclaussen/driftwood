@@ -55,12 +55,12 @@ struct FishingLootTable {
 
     private static let level1Table: [(item: LootItem, chance: Double)] = [
         (.resource(.commonFish), 80),
-        (.resource(.driftwood), 20),
+        (.resource(.wood), 20),
     ]
 
     private static let level2Table: [(item: LootItem, chance: Double)] = [
         (.resource(.commonFish), 70),
-        (.resource(.driftwood), 20),
+        (.resource(.wood), 20),
         (.resource(.seaweed), 10),
     ]
 
@@ -68,14 +68,14 @@ struct FishingLootTable {
         (.resource(.commonFish), 60),
         (.oldSet, 16),
         (.resource(.seaweed), 14),
-        (.resource(.driftwood), 10),
+        (.resource(.wood), 10),
     ]
 
     private static let level4Table: [(item: LootItem, chance: Double)] = [
         (.resource(.commonFish), 50),
         (.oldSet, 16),
         (.resource(.seaweed), 14),
-        (.resource(.driftwood), 10),
+        (.resource(.wood), 10),
         (.resource(.overgrownCoin), 5),
         (.resource(.sharkTooth), 5),
     ]
@@ -83,7 +83,7 @@ struct FishingLootTable {
     private static let level5Table: [(item: LootItem, chance: Double)] = [
         (.resource(.commonFish), 50),
         (.resource(.seaweed), 14),
-        (.resource(.driftwood), 10),
+        (.resource(.wood), 10),
         (.oldSet, 8),
         (.resource(.overgrownCoin), 5),
         (.resource(.sharkTooth), 5),

@@ -7,7 +7,7 @@ import SwiftUI
 
 struct ToolButtonView: View {
     let equippedTool: ToolType?
-    let canFish: Bool
+    let canUseTool: Bool
     let onTap: () -> Void
     let onLongPress: () -> Void
 
@@ -17,7 +17,7 @@ struct ToolButtonView: View {
         if isPressed {
             return Color.blue.opacity(0.8)
         }
-        if canFish {
+        if canUseTool {
             return Color.cyan.opacity(0.7)
         }
         return Color.gray.opacity(0.7)
@@ -27,7 +27,7 @@ struct ToolButtonView: View {
         if isPressed {
             return Color.blue
         }
-        if canFish {
+        if canUseTool {
             return Color.cyan
         }
         return Color.black.opacity(0.3)
@@ -47,7 +47,7 @@ struct ToolButtonView: View {
                 .stroke(borderColor, lineWidth: 2)
         )
         .onTapGesture {
-            if canFish {
+            if canUseTool {
                 onTap()
             }
         }

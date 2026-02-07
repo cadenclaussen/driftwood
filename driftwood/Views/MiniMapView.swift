@@ -11,31 +11,38 @@ struct MiniMapView: View {
 
     private let world = World()
     private let tileSize: CGFloat = 24
+    private let viewRadius = 25 // show 50x50 tile region centered on player
 
     var body: some View {
-        let scale = size / CGFloat(world.width)
+        let playerTileX = Int(playerPosition.x / tileSize)
+        let playerTileY = Int(playerPosition.y / tileSize)
+
+        let startX = playerTileX - viewRadius
+        let startY = playerTileY - viewRadius
+        let viewSize = viewRadius * 2
+
+        let scale = size / CGFloat(viewSize)
 
         ZStack {
             VStack(spacing: 0) {
-                ForEach(0..<world.height, id: \.self) { y in
+                ForEach(0..<viewSize, id: \.self) { localY in
                     HStack(spacing: 0) {
-                        ForEach(0..<world.width, id: \.self) { x in
+                        ForEach(0..<viewSize, id: \.self) { localX in
+                            let worldX = startX + localX
+                            let worldY = startY + localY
                             Rectangle()
-                                .fill(world.tile(at: x, y: y).color)
+                                .fill(world.tile(at: worldX, y: worldY).color)
                                 .frame(width: scale, height: scale)
                         }
                     }
                 }
             }
 
-            // player dot
+            // player dot (always centered)
             Circle()
                 .fill(Color.red)
                 .frame(width: 6, height: 6)
-                .position(
-                    x: (playerPosition.x / tileSize) * scale,
-                    y: (playerPosition.y / tileSize) * scale
-                )
+                .position(x: size / 2, y: size / 2)
         }
         .frame(width: size, height: size)
         .cornerRadius(4)

@@ -60,15 +60,6 @@ struct Recipe: Identifiable {
         [
             // basic processing
             Recipe(
-                id: "wood",
-                name: "Wood",
-                result: .collectible(.resource(type: .wood, quantity: 1)),
-                materials: [
-                    CraftingMaterial(resource: .driftwood, quantity: 2)
-                ],
-                unlocksAfter: .driftwood
-            ),
-            Recipe(
                 id: "plantFiber",
                 name: "Plant Fiber",
                 result: .collectible(.resource(type: .plantFiber, quantity: 1)),

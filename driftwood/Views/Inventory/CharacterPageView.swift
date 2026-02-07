@@ -155,9 +155,17 @@ struct CharacterPageView: View {
                     .fill(hasUpgrade ? Color.green.opacity(0.3) : Color.gray.opacity(0.2))
                     .frame(width: 40, height: 40)
 
-                Image(systemName: upgrade.iconName)
-                    .font(.system(size: 18))
-                    .foregroundColor(hasUpgrade ? .green : .gray.opacity(0.4))
+                if upgrade.usesCustomImage {
+                    Image(upgrade.iconName)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: 32, height: 32)
+                        .opacity(hasUpgrade ? 1.0 : 0.4)
+                } else {
+                    Image(systemName: upgrade.iconName)
+                        .font(.system(size: 18))
+                        .foregroundColor(hasUpgrade ? .green : .gray.opacity(0.4))
+                }
             }
 
             Text(upgrade.displayName)

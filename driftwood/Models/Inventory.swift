@@ -182,12 +182,14 @@ struct Inventory: Codable, Equatable {
     static let totalSlotCount = 30
 
     static func empty() -> Inventory {
-        Inventory(
+        var upgrades = MajorUpgrades()
+        upgrades.hasSailboat = true // TODO: remove after testing
+        return Inventory(
             tools: ToolInventory(),
             collectibles: (0..<totalSlotCount).map { _ in CollectibleSlot() },
             equipment: EquipmentSlots(),
             accessories: AccessorySlots(),
-            majorUpgrades: MajorUpgrades(),
+            majorUpgrades: upgrades,
             discoveredResources: []
         )
     }

@@ -25,6 +25,10 @@ class GameViewModel: ObservableObject {
     @Published var showLevelUpNotification: Bool = false
     @Published var levelUpNotificationLevel: Int = 0
 
+    // sailing state
+    @Published var sailboat: Sailboat?
+    @Published var sailingState: SailingState = SailingState()
+
     @Published var joystickOffset: CGSize = .zero
     @Published var screenFadeOpacity: Double = 0
 
@@ -62,6 +66,12 @@ class GameViewModel: ObservableObject {
         // load fishing state
         self.fishingState = profile.fishingState
         self.player.equippedTool = profile.equippedTool
+
+        // load sailing state
+        if let sailboatPos = profile.sailboatPosition {
+            self.sailboat = Sailboat(position: sailboatPos.cgPoint)
+        }
+        self.player.isSailing = profile.isSailing
     }
 
     // MARK: - Inventory
@@ -110,15 +120,17 @@ class GameViewModel: ObservableObject {
     }
 
     func createSaveProfile() -> SaveProfile {
+        let sailboatPos = sailboat.map { CodablePoint($0.position) }
+
         // if swimming, save the last land position instead of current water position
         if player.isSwimming, let landPosition = player.swimStartPoint {
             var landPlayer = player
             landPlayer.position = landPosition
             landPlayer.isSwimming = false
             landPlayer.swimStartPoint = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
         }
-        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool)
+        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
     }
 
     func saveCurrentProfile() {
@@ -127,6 +139,14 @@ class GameViewModel: ObservableObject {
     }
 
     private func updateStamina(deltaTime: CGFloat, isMoving: Bool) {
+        // no stamina drain while sailing
+        if player.isSailing {
+            if player.stamina < player.maxStamina {
+                player.stamina = min(player.stamina + player.staminaRegenRate * deltaTime, player.maxStamina)
+            }
+            return
+        }
+
         if player.isSwimming {
             if isMoving {
                 let drainRate = player.isSprinting ? player.swimSprintStaminaDrainRate : player.swimStaminaDrainRate
@@ -236,10 +256,16 @@ class GameViewModel: ObservableObject {
         let distance = hypot(joystickOffset.width, joystickOffset.height)
         let isMoving = distance > 0
 
-        player.isWalking = isMoving
+        player.isWalking = isMoving && !player.isSailing
 
         updateAttackAnimation(deltaTime: deltaTime)
         updateStamina(deltaTime: deltaTime, isMoving: isMoving)
+
+        // handle sailing movement
+        if player.isSailing {
+            updateSailingPosition(deltaTime: deltaTime, distance: distance, maxRadius: maxRadius)
+            return
+        }
 
         guard isMoving else { return }
 
@@ -284,6 +310,81 @@ class GameViewModel: ObservableObject {
         player.facingDirection = FacingDirection.from(direction: player.lookDirection)
 
         updateSwimmingState(previousPosition: previousPosition)
+    }
+
+    private func updateSailingPosition(deltaTime: CGFloat, distance: CGFloat, maxRadius: CGFloat) {
+        // update wind
+        sailingState.updateWind(deltaTime: deltaTime)
+
+        // calculate joystick velocity
+        var deltaX: CGFloat = 0
+        var deltaY: CGFloat = 0
+
+        if distance > 0 {
+            let clampedDistance = min(distance, maxRadius)
+            let normalizedX = (joystickOffset.width / distance) * (clampedDistance / maxRadius)
+            let normalizedY = (joystickOffset.height / distance) * (clampedDistance / maxRadius)
+
+            // sailing speed: 4x swim speed = 2x walk speed
+            let sailingSpeed = movementSpeed * player.swimSpeedMultiplier * player.sailingSpeedMultiplier
+            deltaX = normalizedX * sailingSpeed * deltaTime
+            deltaY = normalizedY * sailingSpeed * deltaTime
+
+            // update facing direction
+            player.lookDirection = CGPoint(
+                x: joystickOffset.width / distance,
+                y: joystickOffset.height / distance
+            )
+            player.facingDirection = FacingDirection.from(direction: player.lookDirection)
+        }
+
+        // add wind push
+        let windPush = sailingState.windDirection
+        deltaX += windPush.x * sailingState.windStrength * deltaTime
+        deltaY += windPush.y * sailingState.windStrength * deltaTime
+
+        let newPosition = CGPoint(
+            x: player.position.x + deltaX,
+            y: player.position.y + deltaY
+        )
+
+        // use sailing collision check
+        if canSailTo(newPosition) {
+            player.position = newPosition
+            sailboat?.position = newPosition
+        } else {
+            // slide movement
+            let slideX = CGPoint(x: player.position.x + deltaX, y: player.position.y)
+            if canSailTo(slideX) {
+                player.position = slideX
+                sailboat?.position = slideX
+            }
+            let slideY = CGPoint(x: player.position.x, y: player.position.y + deltaY)
+            if canSailTo(slideY) {
+                player.position = slideY
+                sailboat?.position = slideY
+            }
+        }
+    }
+
+    private func canSailTo(_ position: CGPoint) -> Bool {
+        // boat hitbox: 48 wide x 36 tall
+        let halfWidth: CGFloat = 24
+        let halfHeight: CGFloat = 18
+
+        let leftTile = Int(floor((position.x - halfWidth) / tileSize))
+        let rightTile = Int(floor((position.x + halfWidth - 0.01) / tileSize))
+        let topTile = Int(floor((position.y - halfHeight) / tileSize))
+        let bottomTile = Int(floor((position.y + halfHeight - 0.01) / tileSize))
+
+        for tileY in topTile...bottomTile {
+            for tileX in leftTile...rightTile {
+                if !world.tile(at: tileX, y: tileY).isSwimmable {
+                    return false
+                }
+            }
+        }
+        return true
     }
 
     private func canMoveTo(_ position: CGPoint) -> Bool {
@@ -382,10 +483,12 @@ class GameViewModel: ObservableObject {
         if player.isAttacking { return false }
         switch tool {
         case .fishingRod:
-            return isNearWater() && !player.isSwimming
+            return isFacingWater() && !player.isSwimming
         case .sword:
             return inventoryViewModel.inventory.tools.swordTier > 0
-        case .axe, .wand:
+        case .axe:
+            return isFacingTree() || isFacingRock()
+        case .wand:
             return false // not yet implemented
         }
     }
@@ -397,8 +500,22 @@ class GameViewModel: ObservableObject {
             startFishing()
         case .sword:
             startSwordSwing()
-        case .axe, .wand:
+        case .axe:
+            useAxe()
+        case .wand:
             break // not yet implemented
+        }
+    }
+
+    // MARK: - Axe
+
+    func useAxe() {
+        if isFacingTree() {
+            _ = inventoryViewModel.addItem(.resource(type: .wood, quantity: 1))
+            saveCurrentProfile()
+        } else if isFacingRock() {
+            _ = inventoryViewModel.addItem(.resource(type: .stone, quantity: 1))
+            saveCurrentProfile()
         }
     }
 
@@ -425,24 +542,75 @@ class GameViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Fishing
+    // MARK: - Directional Detection
 
-    var canFish: Bool {
-        player.equippedTool == .fishingRod && isNearWater() && !player.isSwimming
+    private func facingOffset() -> (dx: Int, dy: Int) {
+        switch player.facingDirection {
+        case .up: return (0, -1)
+        case .down: return (0, 1)
+        case .left: return (-1, 0)
+        case .right: return (1, 0)
+        }
     }
 
-    func isNearWater() -> Bool {
+    func isFacingWater() -> Bool {
         let playerTileX = Int(player.position.x / tileSize)
         let playerTileY = Int(player.position.y / tileSize)
+        let (dx, dy) = facingOffset()
+        // check both 1 and 2 tiles away (boat is summoned 2 tiles out)
+        let tile1 = world.tile(at: playerTileX + dx, y: playerTileY + dy)
+        let tile2 = world.tile(at: playerTileX + dx * 2, y: playerTileY + dy * 2)
+        return tile1.isSwimmable && tile2.isSwimmable
+    }
 
-        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)] // up, down, left, right
-        for (dx, dy) in directions {
-            let tile = world.tile(at: playerTileX + dx, y: playerTileY + dy)
-            if tile.isSwimmable {
+    func isFacingTree() -> Bool {
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        let (dx, dy) = facingOffset()
+        let targetX = playerTileX + dx
+        let targetY = playerTileY + dy
+
+        // trees use groundSprites (trunk is 2x2 tiles)
+        for sprite in world.groundSprites {
+            let spriteLeft = sprite.x
+            let spriteRight = sprite.x + sprite.size - 1
+            let spriteTop = sprite.y
+            let spriteBottom = sprite.y + sprite.size - 1
+
+            if targetX >= spriteLeft && targetX <= spriteRight &&
+               targetY >= spriteTop && targetY <= spriteBottom {
                 return true
             }
         }
         return false
+    }
+
+    func isFacingRock() -> Bool {
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        let (dx, dy) = facingOffset()
+        let targetX = playerTileX + dx
+        let targetY = playerTileY + dy
+
+        // rocks are 2x2 tiles anchored at top-left
+        for rock in world.rockOverlays {
+            let rockLeft = rock.x
+            let rockRight = rock.x + 1  // 2 tiles wide
+            let rockTop = rock.y
+            let rockBottom = rock.y + 1  // 2 tiles tall
+
+            if targetX >= rockLeft && targetX <= rockRight &&
+               targetY >= rockTop && targetY <= rockBottom {
+                return true
+            }
+        }
+        return false
+    }
+
+    // MARK: - Fishing
+
+    var canFish: Bool {
+        player.equippedTool == .fishingRod && isFacingWater() && !player.isSwimming
     }
 
     func startFishing() {
@@ -497,5 +665,101 @@ class GameViewModel: ObservableObject {
         fishingViewModel = nil
         saveCurrentProfile()
         startGameLoop()
+    }
+
+    // MARK: - Sailing
+
+    var canSummonSailboat: Bool {
+        inventoryViewModel.inventory.majorUpgrades.hasSailboat &&
+        !player.isSwimming &&
+        !player.isSailing &&
+        isFacingWater()
+    }
+
+    var isNearSailboat: Bool {
+        guard let boat = sailboat, !player.isSailing, !player.isSwimming else { return false }
+        let distance = hypot(player.position.x - boat.position.x,
+                             player.position.y - boat.position.y)
+        return distance < tileSize * 2.0
+    }
+
+    var isNearLandWhileSailing: Bool {
+        guard player.isSailing else { return false }
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        for dy in -1...1 {
+            for dx in -1...1 {
+                let tile = world.tile(at: playerTileX + dx, y: playerTileY + dy)
+                if tile.isWalkable { return true }
+            }
+        }
+        return false
+    }
+
+    func summonSailboat() {
+        guard canSummonSailboat else { return }
+
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        let (dx, dy) = facingOffset()
+        // place boat 2 tiles away so it doesn't get stuck in land collision
+        let targetTileX = playerTileX + dx * 2
+        let targetTileY = playerTileY + dy * 2
+
+        // place boat at center of target water tile
+        let boatX = CGFloat(targetTileX) * tileSize + tileSize / 2
+        let boatY = CGFloat(targetTileY) * tileSize + tileSize / 2
+
+        sailboat = Sailboat(position: CGPoint(x: boatX, y: boatY))
+        saveCurrentProfile()
+    }
+
+    func boardSailboat() {
+        guard let boat = sailboat, isNearSailboat else { return }
+
+        player.position = boat.position
+        player.isSailing = true
+        player.isSwimming = false
+        player.swimStartPoint = nil
+        saveCurrentProfile()
+    }
+
+    func disembark() {
+        guard player.isSailing, isNearLandWhileSailing else { return }
+
+        // keep sailboat at current position
+        sailboat?.position = player.position
+
+        // find nearest walkable tile, prefer facing direction
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        let (facingDx, facingDy) = facingOffset()
+
+        // check facing direction first
+        let facingTile = world.tile(at: playerTileX + facingDx, y: playerTileY + facingDy)
+        if facingTile.isWalkable {
+            let landX = CGFloat(playerTileX + facingDx) * tileSize + tileSize / 2
+            let landY = CGFloat(playerTileY + facingDy) * tileSize + tileSize / 2
+            player.position = CGPoint(x: landX, y: landY)
+            player.isSailing = false
+            saveCurrentProfile()
+            return
+        }
+
+        // search all adjacent tiles for walkable
+        for dy in -1...1 {
+            for dx in -1...1 {
+                if dx == 0 && dy == 0 { continue }
+                let tile = world.tile(at: playerTileX + dx, y: playerTileY + dy)
+                if tile.isWalkable {
+                    let landX = CGFloat(playerTileX + dx) * tileSize + tileSize / 2
+                    let landY = CGFloat(playerTileY + dy) * tileSize + tileSize / 2
+                    player.position = CGPoint(x: landX, y: landY)
+                    player.isSailing = false
+                    saveCurrentProfile()
+                    return
+                }
+            }
+        }
     }
 }

@@ -1,7 +1,43 @@
 # Tasks
 
-### 19. Implement rock sprites with collision
+### 21. Implement sailboat system
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Models/Sailboat.swift, Models/SailingState.swift, Views/Sailing/, GameViewModel.swift, GameView.swift
+- **Requested**: Implement sailboat that players craft and use to navigate the ocean. Controls via joystick with wind mechanics (HUD arrow shows direction, gently pushes boat, direction drifts randomly). Speed is 4x swim speed. Boarding/disembarking via contextual prompts. Summonable from inventory when 1 tile from water and facing it. Boat stays where left in world. Black rectangle placeholder sprite (larger than character).
+- **Context**: Major upgrade for ocean exploration. Crafted from 1 Sail + 1 Wheel + 20 Metal Scraps + 10 Wood. No fishing from boat, no other islands yet.
+- **Acceptance Criteria**:
+  - [x] Sailboat model with position tracking
+  - [x] SailingState model with wind mechanics (angle, drift, strength)
+  - [x] Save/load sailboat position and sailing state
+  - [x] Sailing movement at 4x swim speed (2x walk)
+  - [x] Wind pushes boat, direction drifts over time
+  - [x] Water-only collision (boat stays on water)
+  - [x] Summon/board/disembark actions
+  - [x] UI views: SailboatView, WindArrowView, SailboatPromptView
+  - [x] GameView integration (conditional player/boat rendering)
+  - [x] Crafting already wired up via existing MajorUpgrades
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created Sailboat.swift (Codable position), SailingState.swift (wind angle/direction/drift). Extended SaveProfile with sailboatPosition and isSailing. Added Player.isSailing and sailingSpeedMultiplier. GameViewModel: added sailboat/sailingState properties, canSummonSailboat/isNearSailboat/isNearLandWhileSailing computed properties, updateSailingPosition() with wind, canSailTo() for water-only collision, summonSailboat()/boardSailboat()/disembark() actions. Created Views/Sailing/ with SailboatView (48x36 black rectangle), WindArrowView (rotating arrow in HUD), SailboatPromptView (contextual buttons). GameView: shows boat in world, swaps player/boat at center when sailing, wind arrow in HUD when sailing, contextual prompts. Added Sailboat.imageset with custom sailboat.png icon. Updated MajorUpgradeType to use custom image (usesCustomImage=true, iconName="Sailboat"). Updated CharacterPageView.upgradeIcon() to render custom image for upgrades that use them.
+
+### 20. Implement directional tool usage (fishing, axe)
 - **Status**: IN_PROGRESS
+- **Type**: Feature
+- **Location**: GameViewModel.swift, World.swift
+- **Requested**: Change fishing rod to only work if facing towards water (in addition to being 1 block away). Implement axe: if less than 1 block from tree and facing it, gives wood; if less than 1 block from rock and facing it, gives stone.
+- **Context**: Tools should require facing the target object, making gameplay more intentional
+- **Acceptance Criteria**:
+  - [ ] Fishing rod only activates when facing water
+  - [ ] Axe gives wood when facing tree within 1 block
+  - [ ] Axe gives stone when facing rock within 1 block
+  - [ ] Resources added to inventory on tool use
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: TBD
+
+### 19. Implement rock sprites with collision
+- **Status**: COMPLETED
 - **Type**: Feature
 - **Location**: Tile.swift, World.swift, GameView.swift, Assets.xcassets
 - **Requested**: Add rock sprites as tile overlays with collision. 4 small rocks, 3 medium rocks, 1 large rock (2 tiles: left/right). Rocks overlay existing tiles (like grass) but block player movement. Each rock type has custom collision bounds (pixel offsets from 32px tile edges). Test by placing one small-1, one mid-1, and one large rock on the island.

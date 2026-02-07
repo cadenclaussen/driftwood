@@ -122,7 +122,8 @@ struct InventorySlotView: View {
         switch content {
         case .resource(let type, _):
             switch type {
-            case .wood, .driftwood: return .brown
+            case .wood: return .brown
+            case .stone: return .gray
             case .metalScrap, .platinumScraps: return .gray
             case .leatherScrap: return .white
             case .oil: return .black
