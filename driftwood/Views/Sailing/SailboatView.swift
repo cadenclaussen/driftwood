@@ -1,17 +1,18 @@
 //
 //  SailboatView.swift
 //  driftwood
-//
 
 import SwiftUI
 
 struct SailboatView: View {
-    let width: CGFloat = 48
-    let height: CGFloat = 36
+    let rotationAngle: Double // radians
+    let size: CGFloat = 32
 
     var body: some View {
-        Rectangle()
-            .fill(Color.black)
-            .frame(width: width, height: height)
+        Image("BirdEyeSailboat")
+            .interpolation(.none)
+            .resizable()
+            .frame(width: size, height: size)
+            .rotationEffect(.radians(rotationAngle + .pi / 2))
     }
 }

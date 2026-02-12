@@ -90,6 +90,7 @@ struct Player {
 
     // sailing
     var isSailing: Bool = false
+    var sailingBoardPosition: CGPoint? = nil // where player boarded from (for save/respawn)
     let sailingSpeedMultiplier: CGFloat = 3.0 // 3x swim speed = 1.5x walk speed
 
     init(startPosition: CGPoint) {

@@ -68,7 +68,7 @@ struct GameView: View {
                 )
                 // sailboat in world (when not sailing, show at its position)
                 if let boat = viewModel.sailboat, !viewModel.player.isSailing {
-                    SailboatView()
+                    SailboatView(rotationAngle: boat.rotationAngle)
                         .position(
                             x: screenWidth / 2 + (boat.position.x - cameraX),
                             y: screenHeight / 2 + (boat.position.y - cameraY)
@@ -76,7 +76,8 @@ struct GameView: View {
                 }
                 // player or sailboat at screen center
                 if viewModel.player.isSailing {
-                    SailboatView()
+                    let angle = atan2(viewModel.player.lookDirection.y, viewModel.player.lookDirection.x)
+                    SailboatView(rotationAngle: angle)
                         .position(
                             x: screenWidth / 2,
                             y: screenHeight / 2
@@ -149,6 +150,19 @@ struct GameView: View {
                         leveledUp: fishingVM.fishingState.fishingLevel > viewModel.fishingState.fishingLevel,
                         newLevel: fishingVM.fishingState.fishingLevel,
                         onDismiss: { viewModel.dismissFishingResults() }
+                    )
+                }
+
+                // map overlay
+                if viewModel.isMapOpen {
+                    FullMapView(
+                        world: viewModel.world,
+                        playerPosition: viewModel.player.position,
+                        teleportPads: viewModel.world.teleportPads,
+                        currentPadId: viewModel.currentTeleportPad?.id,
+                        isTeleportMode: viewModel.isMapTeleportMode,
+                        onSelectWaypoint: { pad in viewModel.teleportTo(pad: pad) },
+                        onClose: { viewModel.closeMap() }
                     )
                 }
 
@@ -307,8 +321,9 @@ struct GameView: View {
 
     private func hudLayer(safeLeft: CGFloat, safeRight: CGFloat, safeTop: CGFloat) -> some View {
         let buffer: CGFloat = 16
+        let showMinimap = !viewModel.isInventoryOpen && !viewModel.isFishing && !viewModel.isDead && !viewModel.isMapOpen
         return VStack {
-            HStack {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
                     HeartsView(
                         health: viewModel.player.health,
@@ -322,6 +337,15 @@ struct GameView: View {
                         magic: viewModel.player.magic,
                         maxMagic: viewModel.player.maxMagic
                     )
+                    // minimap
+                    if showMinimap {
+                        GameMiniMapView(
+                            world: viewModel.world,
+                            playerPosition: viewModel.player.position,
+                            onTap: { viewModel.openMap(teleportMode: false) }
+                        )
+                        .padding(.top, 8)
+                    }
                 }
                 .padding(.leading, safeLeft + buffer)
                 .padding(.top, safeTop + buffer)
@@ -349,8 +373,11 @@ struct GameView: View {
             .padding(.trailing, safeRight + buffer)
             .padding(.top, buffer)
             Spacer()
-            // sailboat prompts (centered above controls)
-            if viewModel.canSummonSailboat {
+            // contextual prompts (centered above controls)
+            if viewModel.isOnTeleportPad {
+                TeleportPromptView(onTap: { viewModel.openMap(teleportMode: true) })
+                    .padding(.bottom, 8)
+            } else if viewModel.canSummonSailboat {
                 SailboatPromptView(promptType: .summon, onTap: { viewModel.summonSailboat() })
                     .padding(.bottom, 8)
             } else if viewModel.isNearSailboat {

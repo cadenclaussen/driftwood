@@ -1,5 +1,24 @@
 # Tasks
 
+### 22. Implement teleport and map system
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Models/, Views/Map/, GameViewModel.swift, GameView.swift
+- **Requested**: Add second island 50 tiles north, teleport pads (purple tiles) on each island, minimap always visible in top-left that expands to full map on click, teleport prompt when standing on pad that opens map for waypoint selection, instant teleport on waypoint click.
+- **Context**: Fast-travel system for exploring expanded world. Kiro specs at docs/.specs/teleport-map/
+- **Acceptance Criteria**:
+  - [x] Second island at Y=445-454 with beach on left
+  - [x] Teleport pad tile type (purple, walkable)
+  - [x] Teleport pads at both island centers
+  - [x] Minimap in top-left during gameplay
+  - [x] Tap minimap to expand to full map
+  - [x] Teleport prompt when standing on pad
+  - [x] Tap prompt opens map with waypoint selection
+  - [x] Tap waypoint to instant teleport
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Created TeleportPad model (name, tileX, tileY, worldPosition). Added teleportPad to TileType (purple, walkable). Updated World.swift with addIsland() helper, second island at Y=445 (50 tiles north), teleportPads array with both pads. Added isMapOpen/isMapTeleportMode state, isOnTeleportPad/currentTeleportPad computed properties, openMap/closeMap/teleportTo methods to GameViewModel. Created Views/Map/ with GameMiniMapView (80px, tap to expand), FullMapView (300px overlay with waypoint markers), WaypointMarkerView (tappable waypoint). Created TeleportPromptView (purple button). Integrated into GameView: minimap in hudLayer, teleport prompt in controlsLayer, FullMapView overlay.
+
 ### 21. Implement sailboat system
 - **Status**: COMPLETED
 - **Type**: Feature
@@ -22,19 +41,19 @@
 - **Solution**: Created Sailboat.swift (Codable position), SailingState.swift (wind angle/direction/drift). Extended SaveProfile with sailboatPosition and isSailing. Added Player.isSailing and sailingSpeedMultiplier. GameViewModel: added sailboat/sailingState properties, canSummonSailboat/isNearSailboat/isNearLandWhileSailing computed properties, updateSailingPosition() with wind, canSailTo() for water-only collision, summonSailboat()/boardSailboat()/disembark() actions. Created Views/Sailing/ with SailboatView (48x36 black rectangle), WindArrowView (rotating arrow in HUD), SailboatPromptView (contextual buttons). GameView: shows boat in world, swaps player/boat at center when sailing, wind arrow in HUD when sailing, contextual prompts. Added Sailboat.imageset with custom sailboat.png icon. Updated MajorUpgradeType to use custom image (usesCustomImage=true, iconName="Sailboat"). Updated CharacterPageView.upgradeIcon() to render custom image for upgrades that use them.
 
 ### 20. Implement directional tool usage (fishing, axe)
-- **Status**: IN_PROGRESS
+- **Status**: COMPLETED
 - **Type**: Feature
-- **Location**: GameViewModel.swift, World.swift
+- **Location**: GameViewModel.swift
 - **Requested**: Change fishing rod to only work if facing towards water (in addition to being 1 block away). Implement axe: if less than 1 block from tree and facing it, gives wood; if less than 1 block from rock and facing it, gives stone.
 - **Context**: Tools should require facing the target object, making gameplay more intentional
 - **Acceptance Criteria**:
-  - [ ] Fishing rod only activates when facing water
-  - [ ] Axe gives wood when facing tree within 1 block
-  - [ ] Axe gives stone when facing rock within 1 block
-  - [ ] Resources added to inventory on tool use
+  - [x] Fishing rod only activates when facing water
+  - [x] Axe gives wood when facing tree within 1 block
+  - [x] Axe gives stone when facing rock within 1 block
+  - [x] Resources added to inventory on tool use
 - **Failure Count**: 0
 - **Failures**: None
-- **Solution**: TBD
+- **Solution**: canFish now checks isFacingWater() in addition to equipped tool and not swimming. useAxe() checks isFacingTree() to give wood and isFacingRock() to give stone. Helper functions facingOffset(), isFacingWater(), isFacingTree(), isFacingRock() use player.facingDirection to determine target tile.
 
 ### 19. Implement rock sprites with collision
 - **Status**: COMPLETED

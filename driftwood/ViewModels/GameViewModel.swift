@@ -29,6 +29,10 @@ class GameViewModel: ObservableObject {
     @Published var sailboat: Sailboat?
     @Published var sailingState: SailingState = SailingState()
 
+    // map/teleport state
+    @Published var isMapOpen: Bool = false
+    @Published var isMapTeleportMode: Bool = false
+
     @Published var joystickOffset: CGSize = .zero
     @Published var screenFadeOpacity: Double = 0
 
@@ -67,11 +71,14 @@ class GameViewModel: ObservableObject {
         self.fishingState = profile.fishingState
         self.player.equippedTool = profile.equippedTool
 
-        // load sailing state
+        // load sailing state (only if boat exists)
         if let sailboatPos = profile.sailboatPosition {
             self.sailboat = Sailboat(position: sailboatPos.cgPoint)
+            self.player.isSailing = profile.isSailing
+        } else {
+            self.sailboat = nil
+            self.player.isSailing = false
         }
-        self.player.isSailing = profile.isSailing
     }
 
     // MARK: - Inventory
@@ -122,6 +129,15 @@ class GameViewModel: ObservableObject {
     func createSaveProfile() -> SaveProfile {
         let sailboatPos = sailboat.map { CodablePoint($0.position) }
 
+        // if sailing, save the board position (last land position) and not sailing
+        if player.isSailing, let landPosition = player.sailingBoardPosition {
+            var landPlayer = player
+            landPlayer.position = landPosition
+            landPlayer.isSailing = false
+            landPlayer.sailingBoardPosition = nil
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
+        }
+
         // if swimming, save the last land position instead of current water position
         if player.isSwimming, let landPosition = player.swimStartPoint {
             var landPlayer = player
@@ -130,6 +146,7 @@ class GameViewModel: ObservableObject {
             landPlayer.swimStartPoint = nil
             return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
         }
+
         return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
     }
 
@@ -368,14 +385,13 @@ class GameViewModel: ObservableObject {
     }
 
     private func canSailTo(_ position: CGPoint) -> Bool {
-        // boat hitbox: 48 wide x 36 tall
-        let halfWidth: CGFloat = 24
-        let halfHeight: CGFloat = 18
+        // boat hitbox: 32x32 sprite with 9px inset on each side = 14x14 collision
+        let halfSize: CGFloat = 7
 
-        let leftTile = Int(floor((position.x - halfWidth) / tileSize))
-        let rightTile = Int(floor((position.x + halfWidth - 0.01) / tileSize))
-        let topTile = Int(floor((position.y - halfHeight) / tileSize))
-        let bottomTile = Int(floor((position.y + halfHeight - 0.01) / tileSize))
+        let leftTile = Int(floor((position.x - halfSize) / tileSize))
+        let rightTile = Int(floor((position.x + halfSize - 0.01) / tileSize))
+        let topTile = Int(floor((position.y - halfSize) / tileSize))
+        let bottomTile = Int(floor((position.y + halfSize - 0.01) / tileSize))
 
         for tileY in topTile...bottomTile {
             for tileX in leftTile...rightTile {
@@ -717,6 +733,7 @@ class GameViewModel: ObservableObject {
     func boardSailboat() {
         guard let boat = sailboat, isNearSailboat else { return }
 
+        player.sailingBoardPosition = player.position // save land position before boarding
         player.position = boat.position
         player.isSailing = true
         player.isSwimming = false
@@ -727,8 +744,9 @@ class GameViewModel: ObservableObject {
     func disembark() {
         guard player.isSailing, isNearLandWhileSailing else { return }
 
-        // keep sailboat at current position
+        // keep sailboat at current position and rotation
         sailboat?.position = player.position
+        sailboat?.rotationAngle = atan2(player.lookDirection.y, player.lookDirection.x)
 
         // find nearest walkable tile, prefer facing direction
         let playerTileX = Int(player.position.x / tileSize)
@@ -742,6 +760,7 @@ class GameViewModel: ObservableObject {
             let landY = CGFloat(playerTileY + facingDy) * tileSize + tileSize / 2
             player.position = CGPoint(x: landX, y: landY)
             player.isSailing = false
+            player.sailingBoardPosition = nil
             saveCurrentProfile()
             return
         }
@@ -756,10 +775,48 @@ class GameViewModel: ObservableObject {
                     let landY = CGFloat(playerTileY + dy) * tileSize + tileSize / 2
                     player.position = CGPoint(x: landX, y: landY)
                     player.isSailing = false
+                    player.sailingBoardPosition = nil
                     saveCurrentProfile()
                     return
                 }
             }
         }
+    }
+
+    // MARK: - Map/Teleport
+
+    var isOnTeleportPad: Bool {
+        guard !player.isSailing, !player.isSwimming else { return false }
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        return world.tile(at: playerTileX, y: playerTileY) == .teleportPad
+    }
+
+    var currentTeleportPad: TeleportPad? {
+        guard isOnTeleportPad else { return nil }
+        let playerTileX = Int(player.position.x / tileSize)
+        let playerTileY = Int(player.position.y / tileSize)
+        return world.teleportPads.first { $0.tileX == playerTileX && $0.tileY == playerTileY }
+    }
+
+    func openMap(teleportMode: Bool) {
+        isMapTeleportMode = teleportMode
+        isMapOpen = true
+    }
+
+    func closeMap() {
+        isMapOpen = false
+        isMapTeleportMode = false
+    }
+
+    func teleportTo(pad: TeleportPad) {
+        // don't teleport to current location
+        if let current = currentTeleportPad, current.id == pad.id {
+            closeMap()
+            return
+        }
+        player.position = pad.worldPosition
+        closeMap()
+        saveCurrentProfile()
     }
 }

@@ -21,6 +21,8 @@ class SaveManager {
             if profiles.count == 3 {
                 // migrate old saves to new world center if needed
                 profiles = migrateProfilesToNewWorld(profiles)
+                // clear any spawned sailboats (reset for testing)
+                profiles = clearSailboats(profiles)
                 // grant sailboat to all profiles for testing
                 profiles = grantSailboatToAll(profiles)
                 for p in profiles { debugPrintProfile(p) }
@@ -31,6 +33,22 @@ class SaveManager {
             print("Failed to decode profiles: \(error)")
             return createEmptyProfiles()
         }
+    }
+
+    private func clearSailboats(_ profiles: [SaveProfile]) -> [SaveProfile] {
+        var updated = profiles
+        var needsSave = false
+        for i in 0..<updated.count {
+            if updated[i].sailboatPosition != nil || updated[i].isSailing {
+                updated[i].sailboatPosition = nil
+                updated[i].isSailing = false
+                needsSave = true
+            }
+        }
+        if needsSave {
+            saveAllProfiles(updated)
+        }
+        return updated
     }
 
     private func grantSailboatToAll(_ profiles: [SaveProfile]) -> [SaveProfile] {
