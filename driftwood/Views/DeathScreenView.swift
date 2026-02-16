@@ -11,38 +11,41 @@ struct DeathScreenView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.85)
+            Theme.Color.overlayDark
                 .ignoresSafeArea()
 
-            VStack(spacing: 40) {
+            VStack(spacing: Theme.Spacing.massive) {
                 Text("You Died")
-                    .font(.system(size: 42, weight: .bold))
-                    .foregroundColor(.red)
+                    .font(Theme.Font.titleHuge)
+                    .foregroundColor(Theme.Color.negative)
 
-                VStack(spacing: 20) {
+                VStack(spacing: Theme.Spacing.xl) {
                     Button(action: onRespawn) {
                         Text("Respawn")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 200, height: 50)
-                            .background(Color.green.opacity(0.8))
-                            .cornerRadius(10)
+                            .font(Theme.Font.heading)
+                            .foregroundColor(Theme.Color.textPrimary)
+                            .frame(width: Theme.Size.deathButtonWidth, height: Theme.Size.deathButtonHeight)
+                            .background(Theme.Color.buttonPositive)
+                            .cornerRadius(Theme.Radius.medium)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                RoundedRectangle(cornerRadius: Theme.Radius.medium)
+                                    .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.standard)
                             )
                     }
 
-                    Button(action: onMainMenu) {
+                    Button(action: {
+                        HapticService.shared.selection()
+                        onMainMenu()
+                    }) {
                         Text("Main Menu")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 200, height: 50)
-                            .background(Color.gray.opacity(0.6))
-                            .cornerRadius(10)
+                            .font(Theme.Font.heading)
+                            .foregroundColor(Theme.Color.textPrimary)
+                            .frame(width: Theme.Size.deathButtonWidth, height: Theme.Size.deathButtonHeight)
+                            .background(Theme.Color.buttonNeutral)
+                            .cornerRadius(Theme.Radius.medium)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                RoundedRectangle(cornerRadius: Theme.Radius.medium)
+                                    .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.standard)
                             )
                     }
                 }

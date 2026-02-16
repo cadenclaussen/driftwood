@@ -8,10 +8,10 @@ struct GameMiniMapView: View {
     let world: World
     let playerPosition: CGPoint
     let onTap: () -> Void
-    let size: CGFloat = 80
+    let size: CGFloat = Theme.Size.miniMap
 
     private let tileSize: CGFloat = 24
-    private let viewRadius = 25
+    private let viewRadius = 12
 
     var body: some View {
         let playerTileX = Int(playerPosition.x / tileSize)
@@ -47,10 +47,10 @@ struct GameMiniMapView: View {
             context.fill(Path(ellipseIn: dotRect), with: .color(.red))
         }
         .frame(width: size, height: size)
-        .cornerRadius(4)
+        .cornerRadius(Theme.Radius.small)
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.black.opacity(0.5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .stroke(Theme.Color.overlayHalf, lineWidth: Theme.Border.thin)
         )
         .onTapGesture {
             onTap()

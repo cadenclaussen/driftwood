@@ -9,9 +9,9 @@ import Foundation
 
 struct ToolInventory: Codable, Equatable {
     var fishingRodTier: Int = 1 // 0-4, starts at 1 for new players
-    var swordTier: Int = 0 // 0-3
-    var axeTier: Int = 0 // 0-3
-    var hasWand: Bool = false
+    var swordTier: Int = 1 // 0-3, starts at 1
+    var axeTier: Int = 1 // 0-1, starts at 1
+    var hasWand: Bool = true
 
     func tier(for tool: ToolType) -> Int {
         switch tool {

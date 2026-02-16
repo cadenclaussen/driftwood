@@ -10,32 +10,32 @@ struct LevelUpNotificationView: View {
     let isVisible: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(.yellow)
+                .font(.system(size: Theme.Size.iconHuge))
+                .foregroundColor(Theme.Color.selection)
 
             Text("Fishing Level Up!")
-                .font(.headline)
-                .foregroundColor(.white)
+                .font(Theme.Font.bodyLargeSemibold)
+                .foregroundColor(Theme.Color.textPrimary)
 
             Text("Level \(level)")
-                .font(.title2)
+                .font(Theme.Font.headingLight)
                 .fontWeight(.bold)
-                .foregroundColor(.cyan)
+                .foregroundColor(Theme.Color.magicCyan)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Theme.Spacing.xxl)
+        .padding(.vertical, Theme.Spacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.8))
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .fill(Theme.Color.overlayMedium)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.cyan.opacity(0.6), lineWidth: 2)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(Theme.Color.fishing.opacity(Theme.Opacity.button), lineWidth: Theme.Border.standard)
         )
         .scaleEffect(isVisible ? 1 : 0.5)
         .opacity(isVisible ? 1 : 0)
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isVisible)
+        .animation(Theme.Anim.spring, value: isVisible)
     }
 }

@@ -12,7 +12,7 @@ struct InventoryView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.85)
+            Theme.Color.overlayDark
                 .ignoresSafeArea()
                 .onTapGesture {
                     onClose()
@@ -21,14 +21,14 @@ struct InventoryView: View {
             VStack(spacing: 0) {
                 headerBar
                 pageContent
-                    .frame(height: 370)
+                    .frame(height: Theme.Size.inventoryPanelHeight)
             }
-            .frame(width: 500)
-            .background(Color.black.opacity(0.95))
-            .cornerRadius(16)
+            .frame(width: Theme.Size.inventoryPanelWidth)
+            .background(Theme.Color.panelBackground)
+            .cornerRadius(Theme.Radius.large)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.Radius.large)
+                    .stroke(Theme.Color.borderMedium, lineWidth: Theme.Border.thin)
             )
             .scaleEffect(0.85)
             .offset(y: -15)
@@ -56,14 +56,14 @@ struct InventoryView: View {
 
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(.gray)
+                    .font(.system(size: Theme.Size.iconLarge))
+                    .foregroundColor(Theme.Color.textSecondary)
             }
-            .padding(.trailing, 8)
+            .padding(.trailing, Theme.Spacing.sm)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.gray.opacity(0.2))
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(Theme.Color.unownedSlot)
     }
 
     private func pageTab(_ page: InventoryPage) -> some View {
@@ -73,16 +73,16 @@ struct InventoryView: View {
             viewModel.currentPage = page
             viewModel.clearSelection()
         }) {
-            HStack(spacing: 4) {
+            HStack(spacing: Theme.Spacing.xxs) {
                 Image(systemName: page.iconName)
                 Text(page.title)
             }
-            .font(.system(size: 12, weight: isSelected ? .bold : .regular))
-            .foregroundColor(isSelected ? .white : .gray)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(isSelected ? Color.blue.opacity(0.5) : Color.clear)
-            .cornerRadius(8)
+            .font(isSelected ? Theme.Font.captionBold : Theme.Font.caption)
+            .foregroundColor(isSelected ? Theme.Color.textPrimary : Theme.Color.textSecondary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.xs)
+            .background(isSelected ? Theme.Color.tabSelected : Color.clear)
+            .cornerRadius(Theme.Radius.button)
         }
     }
 

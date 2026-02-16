@@ -9,21 +9,21 @@ struct WindArrowView: View {
     let windAngle: CGFloat
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Theme.Spacing.xxs) {
             ZStack {
                 Circle()
-                    .fill(Color.black.opacity(0.5))
-                    .frame(width: 44, height: 44)
+                    .fill(Theme.Color.overlayHalf)
+                    .frame(width: Theme.Size.windArrow, height: Theme.Size.windArrow)
 
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(.system(size: Theme.Size.iconSmall, weight: .bold))
+                    .foregroundColor(Theme.Color.textPrimary)
                     .rotationEffect(.radians(windAngle + .pi / 2))
             }
 
             Text("Wind")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.white)
+                .font(Theme.Font.microMedium)
+                .foregroundColor(Theme.Color.textPrimary)
         }
     }
 }

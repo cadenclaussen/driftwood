@@ -14,69 +14,47 @@ struct FullMapView: View {
     let onClose: () -> Void
 
     private let tileSize: CGFloat = 24
-    private let mapSize: CGFloat = 300
+    private let mapSize: CGFloat = Theme.Size.fullMap
     private let viewRadius = 60
 
     var body: some View {
         ZStack {
             // dark background
-            Color.black.opacity(0.85)
+            Theme.Color.overlayDark
                 .ignoresSafeArea()
                 .onTapGesture { onClose() }
 
-            VStack(spacing: 16) {
-                // header
-                HStack {
-                    Text(isTeleportMode ? "Select Destination" : "World Map")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    Button(action: onClose) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
+            // map centered on screen
+            ZStack {
+                mapCanvas
+                    .frame(width: mapSize, height: mapSize)
+                    .cornerRadius(Theme.Radius.button)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.button)
+                            .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.standard)
+                    )
+
+                // waypoint markers
+                ForEach(teleportPads) { pad in
+                    let markerPos = waypointPosition(for: pad)
+                    WaypointMarkerView(
+                        pad: pad,
+                        isCurrentLocation: pad.id == currentPadId,
+                        isSelectable: isTeleportMode,
+                        onTap: { onSelectWaypoint(pad) }
+                    )
+                    .position(x: markerPos.x, y: markerPos.y)
                 }
-                .padding(.horizontal, 20)
 
-                // map
-                ZStack {
-                    mapCanvas
-                        .frame(width: mapSize, height: mapSize)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                        )
-
-                    // waypoint markers
-                    ForEach(teleportPads) { pad in
-                        let markerPos = waypointPosition(for: pad)
-                        WaypointMarkerView(
-                            pad: pad,
-                            isCurrentLocation: pad.id == currentPadId,
-                            isSelectable: isTeleportMode,
-                            onTap: { onSelectWaypoint(pad) }
-                        )
-                        .position(x: markerPos.x, y: markerPos.y)
-                    }
-
-                    // player indicator (if not on teleport pad)
-                    if currentPadId == nil {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 10, height: 10)
-                            .position(x: mapSize / 2, y: mapSize / 2)
-                    }
-                }
-                .frame(width: mapSize, height: mapSize)
-
-                if isTeleportMode {
-                    Text("Tap a waypoint to teleport")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
+                // player indicator (if not on teleport pad)
+                if currentPadId == nil {
+                    Circle()
+                        .fill(Theme.Color.health)
+                        .frame(width: Theme.Size.mapPlayerDot, height: Theme.Size.mapPlayerDot)
+                        .position(x: mapSize / 2, y: mapSize / 2)
                 }
             }
+            .frame(width: mapSize, height: mapSize)
         }
     }
 

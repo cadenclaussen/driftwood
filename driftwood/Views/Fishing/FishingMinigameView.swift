@@ -9,26 +9,26 @@ struct FishingMinigameView: View {
     @ObservedObject var viewModel: FishingViewModel
     let onComplete: () -> Void
 
-    private let barWidth: CGFloat = 300
+    private let barWidth: CGFloat = Theme.Size.fullMap
     private let barHeight: CGFloat = 40
 
     var body: some View {
         ZStack {
             // dimmed background
-            Color.black.opacity(0.7)
+            Theme.Color.overlayDimmed
                 .ignoresSafeArea()
 
-            VStack(spacing: 30) {
+            VStack(spacing: Theme.Spacing.xxxl) {
                 // remaining catches
                 Text("Catches: \(viewModel.remainingCatches)")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(Theme.Font.bodyLargeSemibold)
+                    .foregroundColor(Theme.Color.textPrimary)
 
                 // combo display
                 if viewModel.comboCount > 0 {
                     Text("Combo x\(viewModel.comboCount)")
-                        .font(.subheadline)
-                        .foregroundColor(.yellow)
+                        .font(Theme.Font.bodyMid)
+                        .foregroundColor(Theme.Color.selection)
                 }
 
                 // timing bar
@@ -42,8 +42,8 @@ struct FishingMinigameView: View {
                 // instructions
                 if viewModel.isAnimating {
                     Text("Tap to catch!")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
+                        .font(Theme.Font.bodyMid)
+                        .foregroundColor(Theme.Color.textPrimary.opacity(Theme.Opacity.overlayDimmed))
                 }
             }
         }
@@ -65,38 +65,38 @@ struct FishingMinigameView: View {
     private var timingBar: some View {
         ZStack(alignment: .leading) {
             // bar background
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.gray.opacity(0.4))
+            RoundedRectangle(cornerRadius: Theme.Radius.button)
+                .fill(Theme.Color.filledSlot)
                 .frame(width: barWidth, height: barHeight)
 
             // green catch zone
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.green.opacity(0.6))
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .fill(Theme.Color.positive.opacity(Theme.Opacity.button))
                 .frame(
                     width: barWidth * viewModel.greenZoneWidth,
-                    height: barHeight - 8
+                    height: barHeight - Theme.Spacing.sm
                 )
                 .offset(x: barWidth * viewModel.greenZoneStart, y: 0)
 
             // perfect zone (brighter green)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.green)
+            RoundedRectangle(cornerRadius: Theme.Spacing.xxxs)
+                .fill(Theme.Color.positive)
                 .frame(
                     width: barWidth * viewModel.perfectZoneWidth,
-                    height: barHeight - 8
+                    height: barHeight - Theme.Spacing.sm
                 )
                 .offset(x: barWidth * viewModel.perfectZoneStart, y: 0)
 
             // indicator line (centered on its position)
             Rectangle()
-                .fill(Color.white)
-                .frame(width: 4, height: barHeight + 10)
-                .offset(x: barWidth * viewModel.indicatorPosition - 2)
+                .fill(Theme.Color.textPrimary)
+                .frame(width: Theme.Spacing.xxs, height: barHeight + Theme.Spacing.smd)
+                .offset(x: barWidth * viewModel.indicatorPosition - Theme.Spacing.xxxs)
         }
         .frame(width: barWidth, height: barHeight)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.5), lineWidth: 2)
+            RoundedRectangle(cornerRadius: Theme.Radius.button)
+                .stroke(Theme.Color.textPrimary.opacity(Theme.Opacity.half), lineWidth: Theme.Border.standard)
         )
     }
 
@@ -105,24 +105,24 @@ struct FishingMinigameView: View {
         switch result {
         case .miss:
             Text("Miss!")
-                .font(.title2)
+                .font(Theme.Font.headingLight)
                 .fontWeight(.bold)
-                .foregroundColor(.red)
+                .foregroundColor(Theme.Color.negative)
         case .noCatch:
             Text("Nothing...")
-                .font(.title2)
+                .font(Theme.Font.headingLight)
                 .fontWeight(.bold)
-                .foregroundColor(.gray)
+                .foregroundColor(Theme.Color.textSecondary)
         case .success:
             Text("Catch!")
-                .font(.title2)
+                .font(Theme.Font.headingLight)
                 .fontWeight(.bold)
-                .foregroundColor(.green)
+                .foregroundColor(Theme.Color.positive)
         case .perfect:
             Text("Perfect!")
-                .font(.title2)
+                .font(Theme.Font.headingLight)
                 .fontWeight(.bold)
-                .foregroundColor(.yellow)
+                .foregroundColor(Theme.Color.selection)
         }
     }
 }

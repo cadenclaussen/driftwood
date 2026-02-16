@@ -225,7 +225,7 @@ enum MealType: String, Codable, CaseIterable {
         }
     }
 
-    var healAmount: Int {
+    var healAmount: Int { // in full hearts
         switch self {
         case .basicMeal: return 2
         case .heartMeal: return 3

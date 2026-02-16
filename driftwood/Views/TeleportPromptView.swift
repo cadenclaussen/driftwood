@@ -9,20 +9,20 @@ struct TeleportPromptView: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 6) {
+            HStack(spacing: Theme.Spacing.xs) {
                 Image(systemName: "arrow.up.and.down.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: Theme.Size.iconTiny, weight: .semibold))
                 Text("Teleport")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(Theme.Font.bodySmallSemibold)
             }
-            .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(red: 0.6, green: 0.3, blue: 0.8))
-            .cornerRadius(8)
+            .foregroundColor(Theme.Color.textPrimary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.Color.teleport)
+            .cornerRadius(Theme.Radius.button)
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.Radius.button)
+                    .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.thin)
             )
         }
     }

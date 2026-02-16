@@ -11,7 +11,7 @@ struct InventorySlotView: View {
     let isMealSlot: Bool
     let onTap: () -> Void
 
-    private let slotSize: CGFloat = 44
+    private let slotSize: CGFloat = Theme.Size.inventorySlot
 
     var body: some View {
         ZStack {
@@ -27,15 +27,18 @@ struct InventorySlotView: View {
             selectionBorder
         }
         .frame(width: slotSize, height: slotSize)
-        .onTapGesture { onTap() }
+        .onTapGesture {
+            HapticService.shared.selection()
+            onTap()
+        }
     }
 
     private var slotBackground: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(slot.isEmpty ? Color.gray.opacity(0.3) : rarityColor.opacity(0.4))
+        RoundedRectangle(cornerRadius: Theme.Radius.slot)
+            .fill(slot.isEmpty ? Theme.Color.emptySlot : Theme.Color.rarity(slot.content?.rarity ?? .common).opacity(Theme.Opacity.slot))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.Radius.slot)
+                    .stroke(Theme.Color.borderDarkSubtle, lineWidth: Theme.Border.thin)
             )
     }
 
@@ -45,10 +48,10 @@ struct InventorySlotView: View {
             Image(content.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 40, height: 40)
+                .frame(width: Theme.Size.slotImage, height: Theme.Size.slotImage)
         } else {
             Image(systemName: content.iconName)
-                .font(.system(size: 20))
+                .font(.system(size: Theme.Size.iconSmall))
                 .foregroundColor(iconColor(for: content))
         }
     }
@@ -57,32 +60,32 @@ struct InventorySlotView: View {
         Group {
             if content.quantity > 1 {
                 Text("\(content.quantity)")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(Color.black.opacity(0.7))
-                    .cornerRadius(4)
+                    .font(Theme.Font.microBold)
+                    .foregroundColor(Theme.Color.textPrimary)
+                    .padding(.horizontal, Theme.Spacing.xxxsm)
+                    .padding(.vertical, Theme.Spacing.xxxxs)
+                    .background(Theme.Color.overlayDimmed)
+                    .cornerRadius(Theme.Radius.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(2)
+                    .padding(Theme.Spacing.xxxs)
             }
         }
     }
 
     private var mealSlotIndicator: some View {
         Image(systemName: "fork.knife")
-            .font(.system(size: 14))
-            .foregroundColor(.gray.opacity(0.4))
+            .font(.system(size: Theme.Size.iconMicro))
+            .foregroundColor(Theme.Color.filledSlot)
     }
 
     private var favoriteIndicator: some View {
         Group {
             if slot.isFavorite {
                 Image(systemName: "star.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(.yellow)
+                    .font(.system(size: Theme.Size.iconPico))
+                    .foregroundColor(Theme.Color.favorite)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(2)
+                    .padding(Theme.Spacing.xxxs)
             }
         }
     }
@@ -91,10 +94,10 @@ struct InventorySlotView: View {
         Group {
             if slot.isJunk {
                 Image(systemName: "trash.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(.red)
+                    .font(.system(size: Theme.Size.iconPico))
+                    .foregroundColor(Theme.Color.junk)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(2)
+                    .padding(Theme.Spacing.xxxs)
             }
         }
     }
@@ -102,53 +105,29 @@ struct InventorySlotView: View {
     private var selectionBorder: some View {
         Group {
             if isSelected {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.yellow, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Theme.Radius.slot)
+                    .stroke(Theme.Color.selection, lineWidth: Theme.Border.standard)
             }
         }
     }
 
     private var rarityColor: Color {
-        guard let content = slot.content else { return .gray }
-        switch content.rarity {
-        case .common: return .gray
-        case .uncommon: return .green
-        case .rare: return .blue
-        case .epic: return .purple
-        }
+        guard let content = slot.content else { return Theme.Color.textSecondary }
+        return Theme.Color.rarity(content.rarity)
     }
 
     private func iconColor(for content: SlotContent) -> Color {
         switch content {
         case .resource(let type, _):
-            switch type {
-            case .wood: return .brown
-            case .stone: return .gray
-            case .metalScrap, .platinumScraps: return .gray
-            case .leatherScrap: return .white
-            case .oil: return .black
-            case .commonFish, .rareFish: return .cyan
-            case .rainbowFish, .theOldOne: return .purple
-            case .seaweed, .plantFiber: return .green
-            case .overgrownCoin: return .yellow
-            case .sharkTooth, .scale: return .white
-            case .brokenWheel, .wire, .plastic, .wheel: return .gray
-            case .sailorsJournal: return .brown
-            case .messageInBottle: return .cyan
-            case .timeLocket: return .yellow
-            case .moonFragment: return .blue
-            case .sunFragment: return .orange
-            case .string: return .white
-            case .cotton, .sail: return .white
-            }
+            return Theme.Color.resourceIcon(type)
         case .foodIngredient:
-            return .green
+            return Theme.Color.positive
         case .meal:
-            return .orange
+            return Theme.Color.food
         case .armor:
-            return .gray
+            return Theme.Color.textSecondary
         case .accessory:
-            return .yellow
+            return Theme.Color.selection
         }
     }
 }
@@ -164,7 +143,7 @@ struct EquipmentSlotView: View {
     let isSelected: Bool
     let onTap: () -> Void
 
-    private let slotSize: CGFloat = 50
+    private let slotSize: CGFloat = Theme.Size.equipmentSlot
 
     init(label: String, iconName: String, item: (any Identifiable)?, itemIconName: String?, itemUsesCustomImage: Bool = false, isSelected: Bool, onTap: @escaping () -> Void) {
         self.label = label
@@ -177,13 +156,13 @@ struct EquipmentSlotView: View {
     }
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Theme.Spacing.xxs) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(item != nil ? Color.blue.opacity(0.3) : Color.gray.opacity(0.3))
+                RoundedRectangle(cornerRadius: Theme.Radius.button)
+                    .fill(item != nil ? Theme.Color.equippedSlotLight : Theme.Color.emptySlot)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? Color.yellow : Color.black.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+                        RoundedRectangle(cornerRadius: Theme.Radius.button)
+                            .stroke(isSelected ? Theme.Color.selection : Theme.Color.borderDarkSubtle, lineWidth: isSelected ? Theme.Border.standard : Theme.Border.thin)
                     )
 
                 if let itemIcon = itemIconName {
@@ -191,24 +170,24 @@ struct EquipmentSlotView: View {
                         Image(itemIcon)
                             .resizable()
                             .interpolation(.none)
-                            .frame(width: 40, height: 40)
+                            .frame(width: Theme.Size.slotImage, height: Theme.Size.slotImage)
                     } else {
                         Image(systemName: itemIcon)
-                            .font(.system(size: 22))
-                            .foregroundColor(.white)
+                            .font(.system(size: Theme.Size.iconMedSm))
+                            .foregroundColor(Theme.Color.textPrimary)
                     }
                 } else {
                     Image(systemName: iconName)
-                        .font(.system(size: 18))
-                        .foregroundColor(.gray.opacity(0.5))
+                        .font(.system(size: Theme.Size.iconMini))
+                        .foregroundColor(Theme.Color.textDisabled)
                 }
             }
             .frame(width: slotSize, height: slotSize)
             .onTapGesture { onTap() }
 
             Text(label)
-                .font(.system(size: 10))
-                .foregroundColor(.gray)
+                .font(Theme.Font.micro)
+                .foregroundColor(Theme.Color.textSecondary)
         }
     }
 }

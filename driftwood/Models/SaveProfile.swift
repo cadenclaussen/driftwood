@@ -37,10 +37,10 @@ struct SaveProfile: Codable, Identifiable {
     var equippedTool: ToolType?
     var sailboatPosition: CodablePoint?
     var isSailing: Bool
+    var slimes: [SlimeSaveData]? // nil = use defaults (migration)
 
     static func empty(id: Int) -> SaveProfile {
         let tileSize: CGFloat = 24
-        // spawn at center of island (which is centered in world)
         let islandCenterTileX = CGFloat(World.islandOriginX) + CGFloat(World.islandSize) / 2
         let islandCenterTileY = CGFloat(World.islandOriginY) + CGFloat(World.islandSize) / 2
         let centerX = islandCenterTileX * tileSize
@@ -59,11 +59,12 @@ struct SaveProfile: Codable, Identifiable {
             fishingState: FishingState(),
             equippedTool: nil,
             sailboatPosition: nil,
-            isSailing: false
+            isSailing: false,
+            slimes: nil
         )
     }
 
-    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, facingDirection: FacingDirection? = .down, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil, sailboatPosition: CodablePoint? = nil, isSailing: Bool = false) {
+    init(id: Int, position: CodablePoint, lookDirection: CodablePoint, facingDirection: FacingDirection? = .down, health: Int, stamina: CGFloat, magic: CGFloat, isEmpty: Bool, lastPlayed: Date?, inventory: Inventory = .empty(), fishingState: FishingState = FishingState(), equippedTool: ToolType? = nil, sailboatPosition: CodablePoint? = nil, isSailing: Bool = false, slimes: [SlimeSaveData]? = nil) {
         self.id = id
         self.position = position
         self.lookDirection = lookDirection
@@ -78,9 +79,10 @@ struct SaveProfile: Codable, Identifiable {
         self.equippedTool = equippedTool
         self.sailboatPosition = sailboatPosition
         self.isSailing = isSailing
+        self.slimes = slimes
     }
 
-    init(from player: Player, id: Int, inventory: Inventory, fishingState: FishingState, equippedTool: ToolType?, sailboatPosition: CodablePoint? = nil) {
+    init(from player: Player, id: Int, inventory: Inventory, fishingState: FishingState, equippedTool: ToolType?, sailboatPosition: CodablePoint? = nil, slimes: [SlimeSaveData]? = nil) {
         self.id = id
         self.position = CodablePoint(player.position)
         self.lookDirection = CodablePoint(player.lookDirection)
@@ -95,5 +97,6 @@ struct SaveProfile: Codable, Identifiable {
         self.equippedTool = equippedTool
         self.sailboatPosition = sailboatPosition
         self.isSailing = player.isSailing
+        self.slimes = slimes
     }
 }

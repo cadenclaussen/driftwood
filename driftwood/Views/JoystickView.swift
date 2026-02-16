@@ -8,16 +8,16 @@ import SwiftUI
 struct JoystickView: View {
     @Binding var offset: CGSize
 
-    private let baseSize: CGFloat = 120
-    private let thumbSize: CGFloat = 50
+    private let baseSize: CGFloat = Theme.Size.joystickBase
+    private let thumbSize: CGFloat = Theme.Size.joystickThumb
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Theme.Color.emptySlot)
                 .frame(width: baseSize, height: baseSize)
             Circle()
-                .fill(Color.gray.opacity(0.6))
+                .fill(Theme.Color.buttonNeutral)
                 .frame(width: thumbSize, height: thumbSize)
                 .offset(thumbOffset)
         }

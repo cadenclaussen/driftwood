@@ -16,22 +16,17 @@ struct WaypointMarkerView: View {
                 onTap()
             }
         }) {
-            VStack(spacing: 2) {
-                ZStack {
-                    Circle()
-                        .fill(isCurrentLocation ? Color.green : Color(red: 0.6, green: 0.3, blue: 0.8))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: isCurrentLocation ? "checkmark" : "arrow.up.and.down")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                Text(pad.name)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white)
+            ZStack {
+                Circle()
+                    .fill(isCurrentLocation ? Theme.Color.positive : Theme.Color.teleport)
+                    .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
+                Image(systemName: isCurrentLocation ? "checkmark" : "arrow.up.and.down")
+                    .font(.system(size: Theme.Size.iconMicro, weight: .bold))
+                    .foregroundColor(Theme.Color.textPrimary)
             }
-            .opacity(isSelectable || isCurrentLocation ? 1.0 : 0.5)
+            .opacity(isSelectable || isCurrentLocation ? Theme.Opacity.full : Theme.Opacity.half)
         }
         .disabled(!isSelectable || isCurrentLocation)
-        .frame(width: 60, height: 50)
+        .frame(width: Theme.Size.waypointMarkerWidth, height: Theme.Size.waypointMarkerHeight)
     }
 }

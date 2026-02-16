@@ -27,10 +27,22 @@ struct PlayerView: View {
         return isWalking ? facingDirection.walkSpriteName : facingDirection.idleSpriteName
     }
 
+    // flip SwordSwingUp sprites to simulate other directions
+    private var attackScaleX: CGFloat {
+        guard isAttacking else { return 1 }
+        return facingDirection == .left ? -1 : 1
+    }
+
+    private var attackScaleY: CGFloat {
+        guard isAttacking else { return 1 }
+        return facingDirection == .down ? -1 : 1
+    }
+
     var body: some View {
         Image(currentSpriteName)
             .interpolation(.none)
             .resizable()
             .frame(width: size, height: size)
+            .scaleEffect(x: attackScaleX, y: attackScaleY)
     }
 }

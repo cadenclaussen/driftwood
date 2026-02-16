@@ -12,13 +12,13 @@ struct CharacterPageView: View {
 
     var body: some View {
         ZStack {
-            HStack(spacing: 24) {
-                VStack(spacing: 16) {
+            HStack(spacing: Theme.Spacing.xxl) {
+                VStack(spacing: Theme.Spacing.lg) {
                     armorSection
                     accessorySection
                 }
 
-                VStack(spacing: 16) {
+                VStack(spacing: Theme.Spacing.lg) {
                     upgradesSection
                     statsSection
                 }
@@ -40,12 +40,12 @@ struct CharacterPageView: View {
     // MARK: - Armor Section
 
     private var armorSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Armor")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(Theme.Color.textPrimary)
 
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Spacing.sm) {
                 ForEach(ArmorSlotType.allCases, id: \.self) { slot in
                     armorSlotView(slot)
                 }
@@ -83,12 +83,12 @@ struct CharacterPageView: View {
     // MARK: - Accessory Section
 
     private var accessorySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Accessories")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(Theme.Color.textPrimary)
 
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Spacing.sm) {
                 ForEach(AccessorySlotType.allCases, id: \.self) { slot in
                     accessorySlotView(slot)
                 }
@@ -100,7 +100,7 @@ struct CharacterPageView: View {
         let accessory = viewModel.inventory.accessories.accessory(for: slot)
         let isSelected = selectedAccessorySlot == slot
 
-        return VStack(spacing: 4) {
+        return VStack(spacing: Theme.Spacing.xxs) {
             EquipmentSlotView(
                 label: slot.displayName,
                 iconName: slot.iconName,
@@ -117,8 +117,8 @@ struct CharacterPageView: View {
 
             if let acc = accessory {
                 Text("Tier \(acc.tier)")
-                    .font(.system(size: 9))
-                    .foregroundColor(.yellow)
+                    .font(Theme.Font.nano)
+                    .foregroundColor(Theme.Color.selection)
             }
         }
         .contextMenu {
@@ -133,12 +133,12 @@ struct CharacterPageView: View {
     // MARK: - Upgrades Section
 
     private var upgradesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Major Upgrades")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(Theme.Color.textPrimary)
 
-            HStack(spacing: 12) {
+            HStack(spacing: Theme.Spacing.md) {
                 ForEach(MajorUpgradeType.allCases, id: \.self) { upgrade in
                     upgradeIcon(upgrade)
                 }
@@ -149,28 +149,28 @@ struct CharacterPageView: View {
     private func upgradeIcon(_ upgrade: MajorUpgradeType) -> some View {
         let hasUpgrade = viewModel.inventory.majorUpgrades.has(upgrade)
 
-        return VStack(spacing: 4) {
+        return VStack(spacing: Theme.Spacing.xxs) {
             ZStack {
                 Circle()
-                    .fill(hasUpgrade ? Color.green.opacity(0.3) : Color.gray.opacity(0.2))
-                    .frame(width: 40, height: 40)
+                    .fill(hasUpgrade ? Theme.Color.craftable.opacity(Theme.Opacity.subtle) : Theme.Color.unownedSlot)
+                    .frame(width: Theme.Spacing.massive, height: Theme.Spacing.massive)
 
                 if upgrade.usesCustomImage {
                     Image(upgrade.iconName)
                         .resizable()
                         .interpolation(.none)
-                        .frame(width: 32, height: 32)
+                        .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
                         .opacity(hasUpgrade ? 1.0 : 0.4)
                 } else {
                     Image(systemName: upgrade.iconName)
-                        .font(.system(size: 18))
-                        .foregroundColor(hasUpgrade ? .green : .gray.opacity(0.4))
+                        .font(.system(size: Theme.Size.iconMini))
+                        .foregroundColor(hasUpgrade ? Theme.Color.positive : Theme.Color.textSecondary.opacity(Theme.Opacity.slot))
                 }
             }
 
             Text(upgrade.displayName)
-                .font(.system(size: 8))
-                .foregroundColor(hasUpgrade ? .white : .gray)
+                .font(Theme.Font.pico)
+                .foregroundColor(hasUpgrade ? Theme.Color.textPrimary : Theme.Color.textSecondary)
                 .lineLimit(1)
         }
     }
@@ -178,12 +178,12 @@ struct CharacterPageView: View {
     // MARK: - Stats Section
 
     private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Total Bonuses")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(Theme.Color.textPrimary)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 let armorStats = viewModel.inventory.equipment.totalStats
                 let accStats = viewModel.inventory.accessories.totalStats
 
@@ -193,24 +193,24 @@ struct CharacterPageView: View {
                 let totalSpeed = armorStats.movementSpeed + accStats.movementSpeed
 
                 if totalHearts > 0 {
-                    statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", totalHearts))", color: .red)
+                    statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", totalHearts))", color: Theme.Color.statHealth)
                 }
                 if totalDefense > 0 {
-                    statLine(icon: "shield.fill", label: "Defense", value: "+\(totalDefense)", color: .blue)
+                    statLine(icon: "shield.fill", label: "Defense", value: "+\(totalDefense)", color: Theme.Color.statDefense)
                 }
                 if totalFortune > 0 {
                     fishFortuneLine(value: totalFortune)
                 }
                 if totalSpeed > 0 {
-                    statLine(icon: "figure.run", label: "Speed", value: "+\(Int(totalSpeed * 100))%", color: .green)
+                    statLine(icon: "figure.run", label: "Speed", value: "+\(Int(totalSpeed * 100))%", color: Theme.Color.statSpeed)
                 }
                 if accStats.maxMP > 0 {
-                    statLine(icon: "sparkles", label: "Max MP", value: "+\(Int(accStats.maxMP))", color: .purple)
+                    statLine(icon: "sparkles", label: "Max MP", value: "+\(Int(accStats.maxMP))", color: Theme.Color.statMagic)
                 }
             }
-            .padding(8)
-            .background(Color.gray.opacity(0.2))
-            .cornerRadius(8)
+            .padding(Theme.Spacing.sm)
+            .background(Theme.Color.unownedSlot)
+            .cornerRadius(Theme.Radius.button)
         }
     }
 
@@ -218,14 +218,14 @@ struct CharacterPageView: View {
         HStack {
             Image(systemName: icon)
                 .foregroundColor(color)
-                .frame(width: 16)
+                .frame(width: Theme.Size.iconTiny)
             Text(label)
-                .foregroundColor(.gray)
+                .foregroundColor(Theme.Color.textSecondary)
             Spacer()
             Text(value)
-                .foregroundColor(.white)
+                .foregroundColor(Theme.Color.textPrimary)
         }
-        .font(.system(size: 11))
+        .font(Theme.Font.label)
     }
 
     private func fishFortuneLine(value: Int) -> some View {
@@ -233,38 +233,38 @@ struct CharacterPageView: View {
             Image("Fish")
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
             Text("Fortune")
-                .foregroundColor(.gray)
+                .foregroundColor(Theme.Color.textSecondary)
             Spacer()
             Text("+\(value)")
-                .foregroundColor(.white)
+                .foregroundColor(Theme.Color.textPrimary)
         }
-        .font(.system(size: 11))
+        .font(Theme.Font.label)
     }
 
     // MARK: - Armor Detail Panel
 
     private func armorDetailPanel(piece: ArmorPiece, slot: ArmorSlotType) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.md) {
             HStack {
                 if piece.usesCustomImage {
                     Image(piece.iconName)
                         .resizable()
                         .interpolation(.none)
-                        .frame(width: 32, height: 32)
+                        .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
                 } else {
                     Image(systemName: piece.iconName)
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
+                        .font(.system(size: Theme.Size.iconMedium))
+                        .foregroundColor(Theme.Color.textPrimary)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
                     Text(piece.displayName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(Theme.Font.bodySmallBold)
+                        .foregroundColor(Theme.Color.textPrimary)
                     Text(piece.rarity.displayName)
-                        .font(.system(size: 11))
+                        .font(Theme.Font.label)
                         .foregroundColor(rarityColor(piece.rarity))
                 }
 
@@ -272,8 +272,8 @@ struct CharacterPageView: View {
 
                 Button(action: { selectedArmorSlot = nil }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.gray)
+                        .font(.system(size: Theme.Size.iconSmall))
+                        .foregroundColor(Theme.Color.textSecondary)
                 }
             }
 
@@ -291,44 +291,44 @@ struct CharacterPageView: View {
                     Image(systemName: "arrow.uturn.backward")
                     Text("Remove")
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.red)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.2))
-                .cornerRadius(6)
+                .font(Theme.Font.captionMedium)
+                .foregroundColor(Theme.Color.negative)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Color.negative.opacity(Theme.Opacity.faint))
+                .cornerRadius(Theme.Radius.slot)
             }
         }
-        .padding(16)
-        .background(Color.black.opacity(0.95))
-        .cornerRadius(12)
+        .padding(Theme.Spacing.lg)
+        .background(Theme.Color.panelBackground)
+        .cornerRadius(Theme.Radius.panel)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(rarityColor(piece.rarity), lineWidth: 2)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(rarityColor(piece.rarity), lineWidth: Theme.Border.standard)
         )
-        .frame(maxWidth: 220)
+        .frame(maxWidth: Theme.Size.detailPanelMaxWidth)
     }
 
     private func armorStatsSection(_ stats: ArmorStats) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
             Text("Stats")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.gray)
+                .font(Theme.Font.labelBold)
+                .foregroundColor(Theme.Color.textSecondary)
 
             if stats.bonusHearts > 0 {
-                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: .red)
+                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: Theme.Color.statHealth)
             }
             if stats.defense > 0 {
-                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: .blue)
+                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: Theme.Color.statDefense)
             }
             if stats.fishingFortune > 0 {
-                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: .cyan)
+                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: Theme.Color.statFortune)
             }
             if stats.magicRegen > 0 {
-                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.magicRegen))/s", color: .purple)
+                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.magicRegen))/s", color: Theme.Color.statMagic)
             }
             if stats.movementSpeed > 0 {
-                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: .green)
+                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: Theme.Color.statSpeed)
             }
         }
     }
@@ -336,18 +336,18 @@ struct CharacterPageView: View {
     // MARK: - Accessory Detail Panel
 
     private func accessoryDetailPanel(accessory: Accessory, slot: AccessorySlotType) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.md) {
             HStack {
                 Image(systemName: accessory.iconName)
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
+                    .font(.system(size: Theme.Size.iconMedium))
+                    .foregroundColor(Theme.Color.textPrimary)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
                     Text(accessory.displayName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(Theme.Font.bodySmallBold)
+                        .foregroundColor(Theme.Color.textPrimary)
                     Text(accessory.rarity.displayName)
-                        .font(.system(size: 11))
+                        .font(Theme.Font.label)
                         .foregroundColor(rarityColor(accessory.rarity))
                 }
 
@@ -355,8 +355,8 @@ struct CharacterPageView: View {
 
                 Button(action: { selectedAccessorySlot = nil }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.gray)
+                        .font(.system(size: Theme.Size.iconSmall))
+                        .foregroundColor(Theme.Color.textSecondary)
                 }
             }
 
@@ -374,57 +374,52 @@ struct CharacterPageView: View {
                     Image(systemName: "arrow.uturn.backward")
                     Text("Remove")
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.red)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.2))
-                .cornerRadius(6)
+                .font(Theme.Font.captionMedium)
+                .foregroundColor(Theme.Color.negative)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Color.negative.opacity(Theme.Opacity.faint))
+                .cornerRadius(Theme.Radius.slot)
             }
         }
-        .padding(16)
-        .background(Color.black.opacity(0.95))
-        .cornerRadius(12)
+        .padding(Theme.Spacing.lg)
+        .background(Theme.Color.panelBackground)
+        .cornerRadius(Theme.Radius.panel)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(rarityColor(accessory.rarity), lineWidth: 2)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(rarityColor(accessory.rarity), lineWidth: Theme.Border.standard)
         )
-        .frame(maxWidth: 220)
+        .frame(maxWidth: Theme.Size.detailPanelMaxWidth)
     }
 
     private func accessoryStatsSection(_ stats: AccessoryStats) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
             Text("Stats")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.gray)
+                .font(Theme.Font.labelBold)
+                .foregroundColor(Theme.Color.textSecondary)
 
             if stats.bonusHealth > 0 {
-                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHealth))", color: .red)
+                statLine(icon: "heart.fill", label: "Health", value: "+\(String(format: "%.1f", stats.bonusHealth))", color: Theme.Color.statHealth)
             }
             if stats.defense > 0 {
-                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: .blue)
+                statLine(icon: "shield.fill", label: "Defense", value: "+\(stats.defense)", color: Theme.Color.statDefense)
             }
             if stats.fishingFortune > 0 {
-                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: .cyan)
+                statLine(icon: "fish", label: "Fortune", value: "+\(stats.fishingFortune)", color: Theme.Color.statFortune)
             }
             if stats.maxMP > 0 {
-                statLine(icon: "sparkles", label: "Max MP", value: "+\(Int(stats.maxMP))", color: .purple)
+                statLine(icon: "sparkles", label: "Max MP", value: "+\(Int(stats.maxMP))", color: Theme.Color.statMagic)
             }
             if stats.mpRegen > 0 {
-                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.mpRegen))/s", color: .purple)
+                statLine(icon: "sparkles", label: "MP Regen", value: "+\(String(format: "%.1f", stats.mpRegen))/s", color: Theme.Color.statMagic)
             }
             if stats.movementSpeed > 0 {
-                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: .green)
+                statLine(icon: "figure.run", label: "Speed", value: "+\(Int(stats.movementSpeed * 100))%", color: Theme.Color.statSpeed)
             }
         }
     }
 
     private func rarityColor(_ rarity: ItemRarity) -> Color {
-        switch rarity {
-        case .common: return .gray
-        case .uncommon: return .green
-        case .rare: return .blue
-        case .epic: return .purple
-        }
+        Theme.Color.rarity(rarity)
     }
 }

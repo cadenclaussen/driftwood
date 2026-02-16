@@ -15,26 +15,26 @@ struct ProfileSelectionView: View {
             Color.black
                 .ignoresSafeArea()
 
-            VStack(spacing: 30) {
+            VStack(spacing: Theme.Spacing.xxxl) {
                 HStack {
                     Button(action: onBackTapped) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: Theme.Spacing.xxs) {
                             Image(systemName: "chevron.left")
                             Text("Back")
                         }
-                        .font(.system(size: 16))
-                        .foregroundColor(.white.opacity(0.8))
+                        .font(Theme.Font.body)
+                        .foregroundColor(Theme.Color.textPrimary.opacity(Theme.Opacity.overlayMedium))
                     }
-                    .padding(.leading, 20)
+                    .padding(.leading, Theme.Spacing.xl)
 
                     Spacer()
                 }
 
                 Text("Select Profile")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(Theme.Font.title)
+                    .foregroundColor(Theme.Color.textPrimary)
 
-                HStack(spacing: 24) {
+                HStack(spacing: Theme.Spacing.xxl) {
                     ForEach(0..<profiles.count, id: \.self) { index in
                         Button(action: { onProfileSelected(index) }) {
                             ProfileCardView(
@@ -47,7 +47,7 @@ struct ProfileSelectionView: View {
 
                 Spacer()
             }
-            .padding(.top, 20)
+            .padding(.top, Theme.Spacing.xl)
         }
     }
 }

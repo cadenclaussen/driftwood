@@ -9,19 +9,22 @@ struct MenuButton: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
+        Button(action: {
+            HapticService.shared.selection()
+            onTap()
+        }) {
             ZStack {
                 Circle()
-                    .fill(Color.gray.opacity(0.8))
-                    .frame(width: 60, height: 60)
+                    .fill(Theme.Color.buttonMenu)
+                    .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
 
                 Image(systemName: "house.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
+                    .font(.system(size: Theme.Size.iconMedium))
+                    .foregroundColor(Theme.Color.textPrimary)
             }
             .overlay(
                 Circle()
-                    .stroke(Color.black.opacity(0.3), lineWidth: 2)
+                    .stroke(Theme.Color.borderDark, lineWidth: Theme.Border.standard)
             )
         }
     }

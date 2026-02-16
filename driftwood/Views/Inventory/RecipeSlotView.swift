@@ -11,7 +11,7 @@ struct RecipeSlotView: View {
     let isSelected: Bool
     let onTap: () -> Void
 
-    private let slotSize: CGFloat = 44
+    private let slotSize: CGFloat = Theme.Size.inventorySlot
 
     var body: some View {
         ZStack {
@@ -24,11 +24,11 @@ struct RecipeSlotView: View {
     }
 
     private var slotBackground: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(isCraftable ? Color.green.opacity(0.3) : Color.red.opacity(0.3))
+        RoundedRectangle(cornerRadius: Theme.Radius.slot)
+            .fill(isCraftable ? Theme.Color.craftable.opacity(Theme.Opacity.subtle) : Theme.Color.uncraftable.opacity(Theme.Opacity.subtle))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isCraftable ? Color.green : Color.red, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Theme.Radius.slot)
+                    .stroke(isCraftable ? Theme.Color.craftable : Theme.Color.uncraftable, lineWidth: Theme.Border.standard)
             )
     }
 
@@ -38,19 +38,19 @@ struct RecipeSlotView: View {
             Image(recipe.result.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
         } else {
             Image(systemName: recipe.result.iconName)
-                .font(.system(size: 20))
-                .foregroundColor(.white)
+                .font(.system(size: Theme.Size.iconSmall))
+                .foregroundColor(Theme.Color.textPrimary)
         }
     }
 
     private var selectionBorder: some View {
         Group {
             if isSelected {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.yellow, lineWidth: 3)
+                RoundedRectangle(cornerRadius: Theme.Radius.slot)
+                    .stroke(Theme.Color.selection, lineWidth: Theme.Border.thick)
             }
         }
     }

@@ -9,21 +9,21 @@ struct MagicBarView: View {
     let magic: CGFloat
     let maxMagic: CGFloat
 
-    private let barWidth: CGFloat = 100
-    private let barHeight: CGFloat = 12
+    private let barWidth: CGFloat = Theme.Size.barWidth
+    private let barHeight: CGFloat = Theme.Size.barHeight
 
     var body: some View {
         ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.gray.opacity(0.5))
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .fill(Theme.Color.borderMedium)
                 .frame(width: barWidth, height: barHeight)
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color(red: 0.75, green: 0.25, blue: 0.85))
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .fill(Theme.Color.magic)
                 .frame(width: barWidth * (magic / maxMagic), height: barHeight)
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.black.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .stroke(Theme.Color.borderDark, lineWidth: Theme.Border.thin)
         )
     }
 }

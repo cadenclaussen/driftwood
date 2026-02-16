@@ -33,20 +33,20 @@ struct SailboatPromptView: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: promptType.icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: Theme.Size.iconTiny))
                 Text(promptType.text)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(Theme.Font.bodySmallMedium)
             }
-            .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.blue.opacity(0.8))
-            .cornerRadius(8)
+            .foregroundColor(Theme.Color.textPrimary)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.smd)
+            .background(Theme.Color.buttonBlue)
+            .cornerRadius(Theme.Radius.button)
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.Radius.button)
+                    .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.thin)
             )
         }
     }

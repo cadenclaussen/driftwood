@@ -7,6 +7,8 @@ import SwiftUI
 
 struct GameView: View {
     @StateObject private var viewModel: GameViewModel
+    @State private var showMainMenuConfirmation = false
+    @State private var slimeBouncePhase: CGFloat = 0
 
     private let tileSize: CGFloat = 24
     private let onReturnToMainMenu: () -> Void
@@ -51,6 +53,13 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
+                // teleport pad overlays (flat on grass)
+                teleportPadsLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
                 // rock overlays (ground level, behind player)
                 rockOverlaysLayer(
                     cameraX: cameraX,
@@ -61,6 +70,14 @@ struct GameView: View {
                 // overlays not overlapping player (behind)
                 overlaysLayer(
                     overlapping: false,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // slimes behind player (bottomY < player bottomY)
+                slimesLayer(
+                    behind: true,
                     cameraX: cameraX,
                     cameraY: cameraY,
                     screenWidth: screenWidth,
@@ -94,7 +111,23 @@ struct GameView: View {
                         x: screenWidth / 2,
                         y: screenHeight / 2
                     )
+                    .opacity(playerBlinkOpacity)
                 }
+                // slimes in front of player (bottomY >= player bottomY)
+                slimesLayer(
+                    behind: false,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // death effects
+                deathEffectsLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
                 // overlays overlapping player (on top)
                 overlaysLayer(
                     overlapping: true,
@@ -169,7 +202,7 @@ struct GameView: View {
                 // level up notification
                 VStack {
                     Spacer()
-                        .frame(height: 80)
+                        .frame(height: Theme.Size.notificationTopOffset)
                     LevelUpNotificationView(
                         level: viewModel.levelUpNotificationLevel,
                         isVisible: viewModel.showLevelUpNotification
@@ -183,8 +216,20 @@ struct GameView: View {
         .onAppear {
             viewModel.onReturnToMainMenu = onReturnToMainMenu
             viewModel.startGameLoop()
+            // bounce animation timer
+            Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
+                slimeBouncePhase += 0.12 // ~0.9s full cycle at 60fps
+            }
         }
         .onDisappear { viewModel.stopGameLoop() }
+        .overlay {
+            if showMainMenuConfirmation {
+                MainMenuConfirmationView(
+                    onCancel: { showMainMenuConfirmation = false },
+                    onConfirm: { viewModel.returnToMainMenu() }
+                )
+            }
+        }
     }
 
     private func cameraGrid(
@@ -200,8 +245,6 @@ struct GameView: View {
         let cameraTileY = Int(floor(cameraY / tileSize))
         let startTileX = cameraTileX - screenTilesX / 2
         let startTileY = cameraTileY - screenTilesY / 2
-
-        let _ = print("DEBUG cameraGrid: camera=(\(Int(cameraX)), \(Int(cameraY))), cameraTile=(\(cameraTileX), \(cameraTileY))")
 
         // calculate pixel offset for smooth scrolling
         let tileOffsetX = cameraX.truncatingRemainder(dividingBy: tileSize)
@@ -242,6 +285,28 @@ struct GameView: View {
                     .interpolation(.none)
                     .resizable()
                     .frame(width: spriteSize, height: spriteSize)
+                    .position(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    private func teleportPadsLayer(
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        ZStack {
+            ForEach(viewModel.world.teleportPads) { pad in
+                let padPixelX = CGFloat(pad.tileX) * tileSize + tileSize / 2
+                let padPixelY = CGFloat(pad.tileY) * tileSize + tileSize / 2
+                let screenX = screenWidth / 2 + (padPixelX - cameraX)
+                let screenY = screenHeight / 2 + (padPixelY - cameraY)
+
+                Image("TeleportPad")
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: tileSize, height: tileSize)
                     .position(x: screenX, y: screenY)
             }
         }
@@ -319,12 +384,61 @@ struct GameView: View {
         }
     }
 
+    private var playerBlinkOpacity: Double {
+        guard viewModel.player.isInvincible else { return 1.0 }
+        return Int(viewModel.player.invincibilityTimer * 10) % 2 == 0 ? 0.3 : 1.0
+    }
+
+    private func slimesLayer(
+        behind: Bool,
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        let playerBottomY = viewModel.player.position.y + viewModel.player.size / 2
+        let aliveSlimes = viewModel.slimes.filter { slime in
+            guard slime.isAlive else { return false }
+            let slimeBottomY = slime.position.y + Slime.halfSize
+            return behind ? (slimeBottomY < playerBottomY) : (slimeBottomY >= playerBottomY)
+        }
+
+        return ZStack {
+            ForEach(aliveSlimes) { slime in
+                let sx = screenWidth / 2 + (slime.position.x - cameraX)
+                let sy = screenHeight / 2 + (slime.position.y - cameraY)
+                SlimeView(
+                    screenX: sx,
+                    screenY: sy,
+                    bouncePhase: slimeBouncePhase + CGFloat(slime.id), // offset per slime
+                    isFlashing: slime.hitFlashTimer > 0
+                )
+            }
+        }
+    }
+
+    private func deathEffectsLayer(
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        ZStack {
+            ForEach(viewModel.deathEffects) { effect in
+                let sx = screenWidth / 2 + (effect.position.x - cameraX)
+                let sy = screenHeight / 2 + (effect.position.y - cameraY)
+                let progress = min(effect.elapsed / SlimeDeathEffect.duration, 1.0)
+                SlimeDeathEffectView(screenX: sx, screenY: sy, progress: progress)
+            }
+        }
+    }
+
     private func hudLayer(safeLeft: CGFloat, safeRight: CGFloat, safeTop: CGFloat) -> some View {
-        let buffer: CGFloat = 16
+        let buffer: CGFloat = Theme.Spacing.lg
         let showMinimap = !viewModel.isInventoryOpen && !viewModel.isFishing && !viewModel.isDead && !viewModel.isMapOpen
         return VStack {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     HeartsView(
                         health: viewModel.player.health,
                         maxHealth: viewModel.effectiveMaxHealth
@@ -344,7 +458,7 @@ struct GameView: View {
                             playerPosition: viewModel.player.position,
                             onTap: { viewModel.openMap(teleportMode: false) }
                         )
-                        .padding(.top, 8)
+                        .padding(.top, Theme.Spacing.sm)
                     }
                 }
                 .padding(.leading, safeLeft + buffer)
@@ -353,8 +467,8 @@ struct GameView: View {
                 // wind arrow (only when sailing)
                 if viewModel.player.isSailing {
                     WindArrowView(windAngle: viewModel.sailingState.windAngle)
-                        .padding(.trailing, safeRight + buffer)
-                        .padding(.top, safeTop + buffer + 50)
+                        .padding(.trailing, safeRight + Theme.Size.hudRightBuffer)
+                        .padding(.top, safeTop + buffer + Theme.Size.windArrowTopOffset)
                 }
             }
             Spacer()
@@ -362,30 +476,31 @@ struct GameView: View {
     }
 
     private func controlsLayer(safeLeft: CGFloat, safeRight: CGFloat, safeBottom: CGFloat) -> some View {
-        let buffer: CGFloat = 16
+        let buffer: CGFloat = Theme.Spacing.lg
+        let rightBuffer: CGFloat = Theme.Size.hudRightBuffer
 
         return VStack {
-            HStack(spacing: 12) {
+            HStack(spacing: Theme.Spacing.md) {
                 Spacer()
                 InventoryButton(onTap: { viewModel.openInventory() })
-                MenuButton(onTap: { viewModel.returnToMainMenu() })
+                MenuButton(onTap: { showMainMenuConfirmation = true })
             }
-            .padding(.trailing, safeRight + buffer)
+            .padding(.trailing, safeRight + rightBuffer)
             .padding(.top, buffer)
             Spacer()
             // contextual prompts (centered above controls)
             if viewModel.isOnTeleportPad {
                 TeleportPromptView(onTap: { viewModel.openMap(teleportMode: true) })
-                    .padding(.bottom, 8)
+                    .padding(.bottom, Theme.Spacing.sm)
             } else if viewModel.canSummonSailboat {
                 SailboatPromptView(promptType: .summon, onTap: { viewModel.summonSailboat() })
-                    .padding(.bottom, 8)
+                    .padding(.bottom, Theme.Spacing.sm)
             } else if viewModel.isNearSailboat {
                 SailboatPromptView(promptType: .board, onTap: { viewModel.boardSailboat() })
-                    .padding(.bottom, 8)
+                    .padding(.bottom, Theme.Spacing.sm)
             } else if viewModel.isNearLandWhileSailing {
                 SailboatPromptView(promptType: .disembark, onTap: { viewModel.disembark() })
-                    .padding(.bottom, 8)
+                    .padding(.bottom, Theme.Spacing.sm)
             }
             HStack(alignment: .bottom) {
                 JoystickView(offset: $viewModel.joystickOffset)
@@ -395,7 +510,7 @@ struct GameView: View {
                 Spacer()
 
                 // right side controls
-                VStack(spacing: 15) {
+                VStack(spacing: Theme.Spacing.mdl) {
                     // tool button (turns cyan when can use equipped tool)
                     if !viewModel.player.isSailing {
                         ToolButtonView(
@@ -411,7 +526,7 @@ struct GameView: View {
                         SprintButtonView(isSprinting: $viewModel.player.isSprinting)
                     }
                 }
-                .padding(.trailing, safeRight + buffer)
+                .padding(.trailing, safeRight + rightBuffer)
                 .padding(.bottom, safeBottom + buffer)
             }
         }
@@ -419,15 +534,15 @@ struct GameView: View {
 }
 
 struct HeartsView: View {
-    let health: Int
+    let health: Int // 1 unit = 1 full heart
     let maxHealth: Int
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Theme.Spacing.xxs) {
             ForEach(0..<maxHealth, id: \.self) { index in
                 Image(systemName: index < health ? "heart.fill" : "heart")
-                    .font(.system(size: 16))
-                    .foregroundColor(index < health ? .red : .gray.opacity(0.5))
+                    .font(.system(size: Theme.Size.iconTiny))
+                    .foregroundColor(index < health ? Theme.Color.health : Theme.Color.textDisabled)
             }
         }
     }
@@ -437,21 +552,21 @@ struct StaminaBarView: View {
     let stamina: CGFloat
     let maxStamina: CGFloat
 
-    private let barWidth: CGFloat = 100
-    private let barHeight: CGFloat = 12
+    private let barWidth: CGFloat = Theme.Size.barWidth
+    private let barHeight: CGFloat = Theme.Size.barHeight
 
     var body: some View {
         ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.gray.opacity(0.5))
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .fill(Theme.Color.borderMedium)
                 .frame(width: barWidth, height: barHeight)
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.green)
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .fill(Theme.Color.stamina)
                 .frame(width: barWidth * (stamina / maxStamina), height: barHeight)
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.black.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .stroke(Theme.Color.borderDark, lineWidth: Theme.Border.thin)
         )
     }
 }
@@ -462,15 +577,15 @@ struct SprintButtonView: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(isSprinting ? Color.orange : Color.gray.opacity(0.7))
-                .frame(width: 60, height: 60)
+                .fill(isSprinting ? Theme.Color.sprint : Theme.Color.buttonInactive)
+                .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
             Image(systemName: "figure.run")
-                .font(.system(size: 24))
-                .foregroundColor(.white)
+                .font(.system(size: Theme.Size.iconMedium))
+                .foregroundColor(Theme.Color.textPrimary)
         }
         .overlay(
             Circle()
-                .stroke(isSprinting ? Color.orange.opacity(0.8) : Color.black.opacity(0.3), lineWidth: 2)
+                .stroke(isSprinting ? Theme.Color.sprint.opacity(Theme.Opacity.overlayMedium) : Theme.Color.borderDark, lineWidth: Theme.Border.standard)
         )
         .gesture(
             DragGesture(minimumDistance: 0)

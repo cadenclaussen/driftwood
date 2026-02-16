@@ -27,10 +27,8 @@ enum FacingDirection: String, Codable {
     }
 
     func attackSpriteName(frame: Int) -> String? {
-        switch self {
-        case .up: return "SwordSwingUp\(frame)"
-        case .down, .left, .right: return nil // not yet implemented
-        }
+        // all directions use SwordSwingUp sprites; view applies transforms
+        return "SwordSwingUp\(frame)"
     }
 
     static func from(direction: CGPoint) -> FacingDirection {
@@ -51,7 +49,7 @@ struct Player {
     var facingDirection: FacingDirection = .down
     let size: CGFloat = 32
 
-    // health system
+    // health system (1 unit = 1 full heart, 5 = 5 hearts)
     var health: Int = 5
     let maxHealth: Int = 5
 
@@ -78,8 +76,14 @@ struct Player {
     var isAttacking: Bool = false
     var attackAnimationFrame: Int = 0
     var attackAnimationTime: CGFloat = 0
+    var attackSwingId: Int = 0 // increments each swing, used for hit-once-per-swing tracking
     static let attackFrameDuration: CGFloat = 0.03 // 30ms per frame
     static let attackFrameCount: Int = 12
+
+    // invincibility frames (after taking enemy damage)
+    var invincibilityTimer: CGFloat = 0
+    var isInvincible: Bool { invincibilityTimer > 0 }
+    static let invincibilityDuration: CGFloat = 0.5
 
     // swimming
     var isSwimming: Bool = false

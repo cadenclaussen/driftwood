@@ -12,7 +12,7 @@ struct World {
     let groundSprites: [GroundSprite]
     let rockOverlays: [RockOverlay]
     let teleportPads: [TeleportPad]
-
+    
     static let worldSize = 1000
     static let islandSize = 10
 
@@ -48,12 +48,10 @@ struct World {
 
         // home island
         addIsland(originX: islandOriginX, originY: islandOriginY, tiles: &tiles)
-        tiles[islandCenterY][islandCenterX] = .teleportPad
         teleportPads.append(TeleportPad(name: "Home Island", tileX: islandCenterX, tileY: islandCenterY))
 
         // north island
         addIsland(originX: northIslandOriginX, originY: northIslandOriginY, tiles: &tiles)
-        tiles[northIslandCenterY][northIslandCenterX] = .teleportPad
         teleportPads.append(TeleportPad(name: "North Island", tileX: northIslandCenterX, tileY: northIslandCenterY))
 
         // add tree 3 tiles right of home island center
@@ -100,6 +98,23 @@ struct World {
         overlays.append(WorldOverlay(x: trunkX + 2, y: trunkY - 2, type: .tree1FlakeTopRight))
         overlays.append(WorldOverlay(x: trunkX - 2, y: trunkY, type: .tree1FlakeBottomLeft))
         overlays.append(WorldOverlay(x: trunkX + 2, y: trunkY, type: .tree1FlakeBottomRight))
+    }
+
+    static func defaultSlimeSpawns() -> [Slime] {
+        let tileSize: CGFloat = 24
+        // 3 grass tile positions on North Island, spread out and avoiding center teleport pad
+        let spawnTiles: [(x: Int, y: Int)] = [
+            (northIslandOriginX + 2, northIslandOriginY + 2),
+            (northIslandOriginX + 7, northIslandOriginY + 3),
+            (northIslandOriginX + 4, northIslandOriginY + 7),
+        ]
+        return spawnTiles.enumerated().map { index, tile in
+            let pos = CGPoint(
+                x: CGFloat(tile.x) * tileSize + tileSize / 2,
+                y: CGFloat(tile.y) * tileSize + tileSize / 2
+            )
+            return Slime(id: index, position: pos, spawnOrigin: pos)
+        }
     }
 
     func tile(at x: Int, y: Int) -> TileType {

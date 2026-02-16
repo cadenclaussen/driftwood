@@ -15,13 +15,13 @@ struct ToolQuickMenuView: View {
     @State private var highlightedIndex: Int? = nil
     @State private var toolFrames: [Int: CGRect] = [:]
 
-    private let iconSize: CGFloat = 50
-    private let spacing: CGFloat = 12
+    private let iconSize: CGFloat = Theme.Size.joystickThumb
+    private let spacing: CGFloat = Theme.Spacing.md
 
     var body: some View {
         ZStack {
             // dimmed background
-            Color.black.opacity(0.4)
+            Theme.Color.overlaySubtle
                 .ignoresSafeArea()
                 .onTapGesture {
                     onDismiss()
@@ -33,10 +33,10 @@ struct ToolQuickMenuView: View {
 
                 if tools.isEmpty {
                     Text("No Tools")
-                        .foregroundColor(.white)
+                        .foregroundColor(Theme.Color.textPrimary)
                         .padding()
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(8)
+                        .background(Theme.Color.overlayDimmed)
+                        .cornerRadius(Theme.Radius.button)
                 } else {
                     HStack(spacing: spacing) {
                         ForEach(Array(tools.enumerated()), id: \.element) { index, tool in
@@ -50,14 +50,14 @@ struct ToolQuickMenuView: View {
                                 )
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.black.opacity(0.8))
-                    .cornerRadius(16)
+                    .padding(.horizontal, Theme.Spacing.xl)
+                    .padding(.vertical, Theme.Spacing.md)
+                    .background(Theme.Color.overlayMedium)
+                    .cornerRadius(Theme.Radius.large)
                 }
 
                 Spacer()
-                    .frame(height: 120)
+                    .frame(height: Theme.Size.joystickBase)
             }
         }
         .gesture(
@@ -82,18 +82,18 @@ struct ToolQuickMenuView: View {
 
         return ZStack {
             Circle()
-                .fill(isHighlighted ? Color.blue : (isEquipped ? Color.green.opacity(0.6) : Color.gray.opacity(0.6)))
+                .fill(isHighlighted ? Theme.Color.equipped : (isEquipped ? Theme.Color.positive.opacity(Theme.Opacity.button) : Theme.Color.buttonNeutral))
                 .frame(width: iconSize, height: iconSize)
 
             toolImage(for: tool)
-                .foregroundColor(.white)
+                .foregroundColor(Theme.Color.textPrimary)
         }
         .overlay(
             Circle()
-                .stroke(isHighlighted ? Color.blue : Color.white.opacity(0.3), lineWidth: 2)
+                .stroke(isHighlighted ? Theme.Color.equipped : Theme.Color.borderLight, lineWidth: Theme.Border.standard)
         )
         .scaleEffect(isHighlighted ? 1.15 : 1.0)
-        .animation(.easeOut(duration: 0.1), value: isHighlighted)
+        .animation(Theme.Anim.quick, value: isHighlighted)
     }
 
     private func updateHighlight() {
@@ -113,10 +113,10 @@ struct ToolQuickMenuView: View {
             Image(tool.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 40, height: 40)
+                .frame(width: Theme.Size.slotImage, height: Theme.Size.slotImage)
         } else {
             Image(systemName: tool.iconName)
-                .font(.system(size: 24))
+                .font(.system(size: Theme.Size.iconMedium))
         }
     }
 }

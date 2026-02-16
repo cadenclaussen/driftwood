@@ -18,7 +18,7 @@ struct ItemDetailPanel: View {
     let onAdd: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.md) {
             headerSection
             Divider()
             descriptionSection
@@ -26,27 +26,27 @@ struct ItemDetailPanel: View {
             Divider()
             actionButtons
         }
-        .padding(16)
-        .background(Color.black.opacity(0.9))
-        .cornerRadius(12)
+        .padding(Theme.Spacing.lg)
+        .background(Theme.Color.panelBackgroundLight)
+        .cornerRadius(Theme.Radius.panel)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(rarityColor, lineWidth: 2)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(rarityColor, lineWidth: Theme.Border.standard)
         )
-        .frame(maxWidth: 280)
+        .frame(maxWidth: Theme.Size.itemPanelMaxWidth)
     }
 
     private var headerSection: some View {
         HStack {
             itemHeaderIcon
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
                 Text(content.displayName)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(Theme.Font.bodyBold)
+                    .foregroundColor(Theme.Color.textPrimary)
 
                 Text(content.rarity.displayName)
-                    .font(.system(size: 12))
+                    .font(Theme.Font.caption)
                     .foregroundColor(rarityColor)
             }
 
@@ -54,16 +54,16 @@ struct ItemDetailPanel: View {
 
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.gray)
+                    .font(.system(size: Theme.Size.iconMedium))
+                    .foregroundColor(Theme.Color.textSecondary)
             }
         }
     }
 
     private var descriptionSection: some View {
         Text(descriptionText)
-            .font(.system(size: 12))
-            .foregroundColor(.gray)
+            .font(Theme.Font.caption)
+            .foregroundColor(Theme.Color.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -73,13 +73,13 @@ struct ItemDetailPanel: View {
         case .meal(_, let healAmount, let tempHearts):
             HStack {
                 Label("\(healAmount)", systemImage: "heart.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(Theme.Color.health)
                 if tempHearts > 0 {
                     Label("+\(tempHearts) temp", systemImage: "heart")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(Theme.Color.selection)
                 }
             }
-            .font(.system(size: 12))
+            .font(Theme.Font.caption)
 
         case .armor(let piece):
             armorStatsView(piece.stats)
@@ -89,8 +89,8 @@ struct ItemDetailPanel: View {
 
         case .resource(_, let quantity):
             Text("Quantity: \(quantity)")
-                .font(.system(size: 12))
-                .foregroundColor(.gray)
+                .font(Theme.Font.caption)
+                .foregroundColor(Theme.Color.textSecondary)
 
         default:
             EmptyView()
@@ -98,72 +98,72 @@ struct ItemDetailPanel: View {
     }
 
     private func armorStatsView(_ stats: ArmorStats) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
             if stats.bonusHearts > 0 {
-                statRow(icon: "heart.fill", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: .red)
+                statRow(icon: "heart.fill", value: "+\(String(format: "%.1f", stats.bonusHearts))", color: Theme.Color.statHealth)
             }
             if stats.fishingFortune > 0 {
                 fishFortuneRow(value: stats.fishingFortune)
             }
             if stats.defense > 0 {
-                statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: .blue)
+                statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: Theme.Color.statDefense)
             }
             if stats.magicRegen > 0 {
-                statRow(icon: "sparkles", value: "+\(String(format: "%.1f", stats.magicRegen)) MP/s", color: .purple)
+                statRow(icon: "sparkles", value: "+\(String(format: "%.1f", stats.magicRegen)) MP/s", color: Theme.Color.statMagic)
             }
             if stats.movementSpeed > 0 {
-                statRow(icon: "figure.run", value: "+\(Int(stats.movementSpeed * 100))% Speed", color: .green)
+                statRow(icon: "figure.run", value: "+\(Int(stats.movementSpeed * 100))% Speed", color: Theme.Color.statSpeed)
             }
         }
     }
 
     private func accessoryStatsView(_ stats: AccessoryStats) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
             if stats.bonusHealth > 0 {
-                statRow(icon: "heart.fill", value: "+\(String(format: "%.1f", stats.bonusHealth))", color: .red)
+                statRow(icon: "heart.fill", value: "+\(String(format: "%.1f", stats.bonusHealth))", color: Theme.Color.statHealth)
             }
             if stats.maxMP > 0 {
-                statRow(icon: "sparkles", value: "+\(Int(stats.maxMP)) Max MP", color: .purple)
+                statRow(icon: "sparkles", value: "+\(Int(stats.maxMP)) Max MP", color: Theme.Color.statMagic)
             }
             if stats.mpRegen > 0 {
-                statRow(icon: "sparkles", value: "+\(String(format: "%.1f", stats.mpRegen)) MP/s", color: .purple)
+                statRow(icon: "sparkles", value: "+\(String(format: "%.1f", stats.mpRegen)) MP/s", color: Theme.Color.statMagic)
             }
             if stats.defense > 0 {
-                statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: .blue)
+                statRow(icon: "shield.fill", value: "+\(stats.defense) Defense", color: Theme.Color.statDefense)
             }
             if stats.fishingFortune > 0 {
                 fishFortuneRow(value: stats.fishingFortune)
             }
             if stats.movementSpeed > 0 {
-                statRow(icon: "figure.run", value: "+\(Int(stats.movementSpeed * 100))% Speed", color: .green)
+                statRow(icon: "figure.run", value: "+\(Int(stats.movementSpeed * 100))% Speed", color: Theme.Color.statSpeed)
             }
         }
     }
 
     private func statRow(icon: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Theme.Spacing.xxs) {
             Image(systemName: icon)
                 .foregroundColor(color)
             Text(value)
-                .foregroundColor(.white)
+                .foregroundColor(Theme.Color.textPrimary)
         }
-        .font(.system(size: 11))
+        .font(Theme.Font.label)
     }
 
     private func fishFortuneRow(value: Int) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Theme.Spacing.xxs) {
             Image("Fish")
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 28, height: 28)
+                .frame(width: Theme.Size.iconLarge, height: Theme.Size.iconLarge)
             Text("+\(value) Fortune")
-                .foregroundColor(.white)
+                .foregroundColor(Theme.Color.textPrimary)
         }
-        .font(.system(size: 11))
+        .font(Theme.Font.label)
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.Spacing.sm) {
             if let onUse = onUse, content.isMeal {
                 actionButton(title: "Use", icon: "fork.knife", color: .orange, action: onUse)
             }
@@ -196,16 +196,16 @@ struct ItemDetailPanel: View {
 
     private func actionButton(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 2) {
+            VStack(spacing: Theme.Spacing.xxxs) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: Theme.Size.iconMicro))
                 Text(title)
-                    .font(.system(size: 9))
+                    .font(Theme.Font.nano)
             }
             .foregroundColor(color)
-            .frame(width: 44, height: 44)
-            .background(color.opacity(0.2))
-            .cornerRadius(8)
+            .frame(width: Theme.Size.actionButton, height: Theme.Size.actionButton)
+            .background(color.opacity(Theme.Opacity.faint))
+            .cornerRadius(Theme.Radius.button)
         }
     }
 
@@ -215,21 +215,16 @@ struct ItemDetailPanel: View {
             Image(content.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 40, height: 40)
+                .frame(width: Theme.Size.slotImage, height: Theme.Size.slotImage)
         } else {
             Image(systemName: content.iconName)
-                .font(.system(size: 32))
+                .font(.system(size: Theme.Size.iconHuge))
                 .foregroundColor(rarityColor)
         }
     }
 
     private var rarityColor: Color {
-        switch content.rarity {
-        case .common: return .gray
-        case .uncommon: return .green
-        case .rare: return .blue
-        case .epic: return .purple
-        }
+        Theme.Color.rarity(content.rarity)
     }
 
     private var descriptionText: String {

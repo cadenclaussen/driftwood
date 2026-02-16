@@ -10,7 +10,6 @@ enum TileType {
     case grass
     case beach
     case rock
-    case teleportPad
 
     var color: Color {
         switch self {
@@ -18,21 +17,20 @@ enum TileType {
         case .grass: return Color(red: 173/255, green: 241/255, blue: 83/255) // #adf153
         case .beach: return Color(red: 0.9, green: 0.85, blue: 0.6)
         case .rock: return Color(red: 0.5, green: 0.5, blue: 0.5)
-        case .teleportPad: return Color(red: 0.6, green: 0.3, blue: 0.8)
         }
     }
 
     var isWalkable: Bool {
         switch self {
         case .ocean, .rock: return false
-        case .grass, .beach, .teleportPad: return true
+        case .grass, .beach: return true
         }
     }
 
     var isSwimmable: Bool {
         switch self {
         case .ocean: return true
-        case .grass, .beach, .rock, .teleportPad: return false
+        case .grass, .beach, .rock: return false
         }
     }
 }

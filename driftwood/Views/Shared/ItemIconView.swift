@@ -9,7 +9,7 @@ struct ItemIconView: View {
     let iconName: String
     let usesCustomImage: Bool
     let size: CGFloat
-    var color: Color = .white
+    var color: Color = Theme.Color.textPrimary
 
     var body: some View {
         if usesCustomImage {

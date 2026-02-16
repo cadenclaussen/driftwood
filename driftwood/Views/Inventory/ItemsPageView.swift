@@ -9,7 +9,7 @@ struct ItemsPageView: View {
     @ObservedObject var viewModel: InventoryViewModel
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Theme.Spacing.xl) {
             toolsSection
             Spacer()
         }
@@ -17,12 +17,12 @@ struct ItemsPageView: View {
     }
 
     private var toolsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("Tools")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.bodySmallBold)
+                .foregroundColor(Theme.Color.textPrimary)
 
-            HStack(spacing: 16) {
+            HStack(spacing: Theme.Spacing.lg) {
                 ForEach(ToolType.allCases, id: \.self) { tool in
                     toolItem(tool)
                 }
@@ -34,30 +34,30 @@ struct ItemsPageView: View {
         let tier = viewModel.inventory.tools.tier(for: tool)
         let isOwned = tier > 0
 
-        return VStack(spacing: 6) {
+        return VStack(spacing: Theme.Spacing.xs) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isOwned ? Color.orange.opacity(0.3) : Color.gray.opacity(0.2))
-                    .frame(width: 60, height: 60)
+                RoundedRectangle(cornerRadius: Theme.Radius.button)
+                    .fill(isOwned ? Theme.Color.ownedToolSlot : Theme.Color.unownedSlot)
+                    .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
 
-                VStack(spacing: 4) {
+                VStack(spacing: Theme.Spacing.xxs) {
                     toolIcon(tool, isOwned: isOwned)
 
                     if tool == .wand {
                         Text(isOwned ? "Owned" : "Locked")
-                            .font(.system(size: 8))
-                            .foregroundColor(isOwned ? .green : .gray)
+                            .font(Theme.Font.pico)
+                            .foregroundColor(isOwned ? Theme.Color.positive : Theme.Color.textSecondary)
                     } else {
                         Text("\(tier)/\(tool.maxTier)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(isOwned ? .white : .gray)
+                            .font(Theme.Font.microBold)
+                            .foregroundColor(isOwned ? Theme.Color.textPrimary : Theme.Color.textSecondary)
                     }
                 }
             }
 
             Text(tool.displayName)
-                .font(.system(size: 11))
-                .foregroundColor(.gray)
+                .font(Theme.Font.label)
+                .foregroundColor(Theme.Color.textSecondary)
                 .lineLimit(1)
         }
     }
@@ -68,12 +68,12 @@ struct ItemsPageView: View {
             Image(tool.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
                 .opacity(isOwned ? 1.0 : 0.5)
         } else {
             Image(systemName: tool.iconName)
-                .font(.system(size: 24))
-                .foregroundColor(isOwned ? .white : .gray.opacity(0.5))
+                .font(.system(size: Theme.Size.iconMedium))
+                .foregroundColor(isOwned ? Theme.Color.textPrimary : Theme.Color.textDisabled)
         }
     }
 

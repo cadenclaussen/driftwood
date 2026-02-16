@@ -8,19 +8,19 @@ import SwiftUI
 struct CollectiblesPageView: View {
     @ObservedObject var viewModel: InventoryViewModel
 
-    private let collectibleColumns = Array(repeating: GridItem(.fixed(44), spacing: 4), count: 5)
-    private let recipeColumns = Array(repeating: GridItem(.fixed(44), spacing: 4), count: 3)
+    private let collectibleColumns = Array(repeating: GridItem(.fixed(Theme.Size.inventorySlot), spacing: Theme.Spacing.xxs), count: 5)
+    private let recipeColumns = Array(repeating: GridItem(.fixed(Theme.Size.inventorySlot), spacing: Theme.Spacing.xxs), count: 3)
 
     var body: some View {
         ZStack {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
                 collectiblesSection
                 Divider()
-                    .background(Color.gray.opacity(0.5))
+                    .background(Theme.Color.borderMedium)
                 craftingSection
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, Theme.Spacing.sm)
 
             if let recipeId = viewModel.selectedRecipeId,
                let recipe = viewModel.unlockedRecipes.first(where: { $0.id == recipeId }) {
@@ -38,23 +38,23 @@ struct CollectiblesPageView: View {
     // MARK: - Collectibles Section (Left)
 
     private var collectiblesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             collectiblesHeader
             collectiblesGrid
             Spacer()
         }
-        .frame(width: 240)
+        .frame(width: Theme.Size.collectiblesSectionWidth)
     }
 
     private var collectiblesHeader: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
                 Text("Collectibles")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(Theme.Font.captionBold)
+                    .foregroundColor(Theme.Color.textPrimary)
                 Text("Meals | Resources")
-                    .font(.system(size: 9))
-                    .foregroundColor(.gray)
+                    .font(Theme.Font.nano)
+                    .foregroundColor(Theme.Color.textSecondary)
             }
             Spacer()
             sortButton
@@ -74,21 +74,21 @@ struct CollectiblesPageView: View {
                 }
             }
         } label: {
-            HStack(spacing: 2) {
+            HStack(spacing: Theme.Spacing.xxxs) {
                 Image(systemName: "arrow.up.arrow.down")
                 Text("Sort")
             }
-            .font(.system(size: 10))
-            .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(Color.gray.opacity(0.3))
-            .cornerRadius(4)
+            .font(Theme.Font.micro)
+            .foregroundColor(Theme.Color.textPrimary)
+            .padding(.horizontal, Theme.Spacing.xs)
+            .padding(.vertical, Theme.Spacing.xxs)
+            .background(Theme.Color.emptySlot)
+            .cornerRadius(Theme.Radius.small)
         }
     }
 
     private var collectiblesGrid: some View {
-        LazyVGrid(columns: collectibleColumns, spacing: 4) {
+        LazyVGrid(columns: collectibleColumns, spacing: Theme.Spacing.xxs) {
             ForEach(0..<Inventory.totalSlotCount, id: \.self) { index in
                 InventorySlotView(
                     slot: viewModel.inventory.collectibles[index],
@@ -114,27 +114,27 @@ struct CollectiblesPageView: View {
     // MARK: - Crafting Section (Right)
 
     private var craftingSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             craftingHeader
             recipeGrid
             Spacer()
         }
-        .frame(width: 150)
+        .frame(width: Theme.Size.craftingSectionWidth)
     }
 
     private var craftingHeader: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
             Text("Crafting")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(Theme.Color.textPrimary)
             Text("Tap to craft")
-                .font(.system(size: 9))
-                .foregroundColor(.gray)
+                .font(Theme.Font.nano)
+                .foregroundColor(Theme.Color.textSecondary)
         }
     }
 
     private var recipeGrid: some View {
-        LazyVGrid(columns: recipeColumns, spacing: 4) {
+        LazyVGrid(columns: recipeColumns, spacing: Theme.Spacing.xxs) {
             ForEach(viewModel.unlockedRecipes) { recipe in
                 RecipeSlotView(
                     recipe: recipe,

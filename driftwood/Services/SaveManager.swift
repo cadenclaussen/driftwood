@@ -25,7 +25,7 @@ class SaveManager {
                 profiles = clearSailboats(profiles)
                 // grant sailboat to all profiles for testing
                 profiles = grantSailboatToAll(profiles)
-                for p in profiles { debugPrintProfile(p) }
+                profiles = resetAllProfiles(profiles)
                 return profiles
             }
             return createEmptyProfiles()
@@ -87,7 +87,6 @@ class SaveManager {
                 let expectedX = newCenterX
                 let expectedY = newCenterY
                 if migrated[i].position.x != expectedX || migrated[i].position.y != expectedY {
-                    print("Updating empty profile \(i) spawn to (\(Int(newCenterX)), \(Int(newCenterY)))")
                     migrated[i] = SaveProfile.empty(id: i)
                     needsSave = true
                 }
@@ -96,7 +95,6 @@ class SaveManager {
                 let y = migrated[i].position.y
                 let onIsland = x >= islandMinX && x <= islandMaxX && y >= islandMinY && y <= islandMaxY
                 if !onIsland {
-                    print("Migrating profile \(i) from (\(Int(x)), \(Int(y))) to island center (\(Int(newCenterX)), \(Int(newCenterY)))")
                     migrated[i].position = CodablePoint(x: newCenterX, y: newCenterY)
                     needsSave = true
                 }
@@ -110,8 +108,15 @@ class SaveManager {
         return migrated
     }
 
-    func debugPrintProfile(_ profile: SaveProfile) {
-        print("DEBUG Profile \(profile.id): position=(\(Int(profile.position.x)), \(Int(profile.position.y))), isEmpty=\(profile.isEmpty)")
+    private let resetKey = "driftwood.profilesReset.v1"
+
+    private func resetAllProfiles(_ profiles: [SaveProfile]) -> [SaveProfile] {
+        // one-time reset: wipe all profiles so new tool/health defaults take effect
+        guard !UserDefaults.standard.bool(forKey: resetKey) else { return profiles }
+        UserDefaults.standard.set(true, forKey: resetKey)
+        let fresh = createEmptyProfiles()
+        saveAllProfiles(fresh)
+        return fresh
     }
 
     func saveProfile(_ profile: SaveProfile) {

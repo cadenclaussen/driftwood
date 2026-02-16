@@ -10,11 +10,11 @@ struct ProfileCardView: View {
     let slotNumber: Int
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.md) {
             // header
             Text(profile.isEmpty ? "New Game" : "Profile \(slotNumber)")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(Theme.Font.bodySemibold)
+                .foregroundColor(Theme.Color.textPrimary)
 
             // mini map preview
             MiniMapView(
@@ -23,7 +23,7 @@ struct ProfileCardView: View {
             )
 
             // stats
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 HeartsView(
                     health: profile.health,
                     maxHealth: 5
@@ -40,12 +40,12 @@ struct ProfileCardView: View {
                 )
             }
         }
-        .padding(16)
-        .background(Color.gray.opacity(0.3))
-        .cornerRadius(12)
+        .padding(Theme.Spacing.lg)
+        .background(Theme.Color.emptySlot)
+        .cornerRadius(Theme.Radius.panel)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(Theme.Color.borderFaint, lineWidth: Theme.Border.thin)
         )
     }
 }

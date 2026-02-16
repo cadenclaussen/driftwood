@@ -12,41 +12,41 @@ struct RecipeDetailPanel: View {
     let onCraft: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.md) {
             headerRow
-            Divider().background(Color.gray)
+            Divider().background(Theme.Color.textSecondary)
             materialsSection
             Spacer()
             craftButton
         }
-        .padding(16)
-        .frame(width: 220, height: 280)
-        .background(Color.black.opacity(0.95))
-        .cornerRadius(12)
+        .padding(Theme.Spacing.lg)
+        .frame(width: Theme.Size.recipePanelWidth, height: Theme.Size.recipePanelHeight)
+        .background(Theme.Color.panelBackground)
+        .cornerRadius(Theme.Radius.panel)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                .stroke(Theme.Color.borderMedium, lineWidth: Theme.Border.thin)
         )
     }
 
     private var headerRow: some View {
         HStack {
             recipeIcon
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxxs) {
                 Text(recipe.name)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(Theme.Font.bodyBold)
+                    .foregroundColor(Theme.Color.textPrimary)
                 if let count = viewModel.resultCount(for: recipe) {
                     Text("Owned: \(count)")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray)
+                        .font(Theme.Font.micro)
+                        .foregroundColor(Theme.Color.textSecondary)
                 }
             }
             Spacer()
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.gray)
+                    .font(.system(size: Theme.Size.iconMedSm))
+                    .foregroundColor(Theme.Color.textSecondary)
             }
         }
     }
@@ -57,20 +57,20 @@ struct RecipeDetailPanel: View {
             Image(recipe.result.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
         } else {
             Image(systemName: recipe.result.iconName)
-                .font(.system(size: 24))
-                .foregroundColor(.white)
-                .frame(width: 32, height: 32)
+                .font(.system(size: Theme.Size.iconMedium))
+                .foregroundColor(Theme.Color.textPrimary)
+                .frame(width: Theme.Size.iconHuge, height: Theme.Size.iconHuge)
         }
     }
 
     private var materialsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Materials")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.gray)
+                .font(Theme.Font.captionSemibold)
+                .foregroundColor(Theme.Color.textSecondary)
 
             ForEach(recipe.materials, id: \.resource) { material in
                 materialRow(material)
@@ -83,15 +83,15 @@ struct RecipeDetailPanel: View {
         let need = material.quantity
         let hasEnough = have >= need
 
-        return HStack(spacing: 8) {
+        return HStack(spacing: Theme.Spacing.sm) {
             materialIcon(material.resource)
             Text(material.resource.displayName)
-                .font(.system(size: 12))
-                .foregroundColor(.white)
+                .font(Theme.Font.caption)
+                .foregroundColor(Theme.Color.textPrimary)
             Spacer()
             Text("\(have) / \(need)")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(hasEnough ? .green : .red)
+                .font(Theme.Font.captionBold)
+                .foregroundColor(hasEnough ? Theme.Color.craftable : Theme.Color.uncraftable)
         }
     }
 
@@ -101,12 +101,12 @@ struct RecipeDetailPanel: View {
             Image(resource.iconName)
                 .resizable()
                 .interpolation(.none)
-                .frame(width: 20, height: 20)
+                .frame(width: Theme.Size.iconSmall, height: Theme.Size.iconSmall)
         } else {
             Image(systemName: resource.iconName)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-                .frame(width: 20, height: 20)
+                .font(.system(size: Theme.Size.iconMicro))
+                .foregroundColor(Theme.Color.textPrimary)
+                .frame(width: Theme.Size.iconSmall, height: Theme.Size.iconSmall)
         }
     }
 
@@ -119,12 +119,12 @@ struct RecipeDetailPanel: View {
             }
         }) {
             Text("Craft")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
+                .font(Theme.Font.bodySmallBold)
+                .foregroundColor(Theme.Color.textPrimary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(canCraft ? Color.green : Color.gray.opacity(0.5))
-                .cornerRadius(8)
+                .frame(height: Theme.Size.actionButton)
+                .background(canCraft ? Theme.Color.craftable : Theme.Color.borderMedium)
+                .cornerRadius(Theme.Radius.button)
         }
         .disabled(!canCraft)
     }

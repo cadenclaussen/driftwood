@@ -40,15 +40,15 @@ struct MiniMapView: View {
 
             // player dot (always centered)
             Circle()
-                .fill(Color.red)
-                .frame(width: 6, height: 6)
+                .fill(Theme.Color.health)
+                .frame(width: Theme.Size.mapMiniDot, height: Theme.Size.mapMiniDot)
                 .position(x: size / 2, y: size / 2)
         }
         .frame(width: size, height: size)
-        .cornerRadius(4)
+        .cornerRadius(Theme.Radius.small)
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.black.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.small)
+                .stroke(Theme.Color.borderDark, lineWidth: Theme.Border.thin)
         )
     }
 }

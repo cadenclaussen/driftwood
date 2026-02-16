@@ -29,6 +29,10 @@ class GameViewModel: ObservableObject {
     @Published var sailboat: Sailboat?
     @Published var sailingState: SailingState = SailingState()
 
+    // enemy state
+    @Published var slimes: [Slime] = []
+    @Published var deathEffects: [SlimeDeathEffect] = []
+
     // map/teleport state
     @Published var isMapOpen: Bool = false
     @Published var isMapTeleportMode: Bool = false
@@ -79,6 +83,20 @@ class GameViewModel: ObservableObject {
             self.sailboat = nil
             self.player.isSailing = false
         }
+
+        // load slimes from save or generate defaults
+        if let savedSlimes = profile.slimes {
+            let defaults = World.defaultSlimeSpawns()
+            self.slimes = savedSlimes.map { data in
+                var slime = defaults.first { $0.id == data.id } ?? Slime(id: data.id, position: data.position.cgPoint, spawnOrigin: data.position.cgPoint)
+                slime.position = data.position.cgPoint
+                slime.health = data.health
+                slime.isAlive = data.isAlive
+                return slime
+            }
+        } else {
+            self.slimes = World.defaultSlimeSpawns()
+        }
     }
 
     // MARK: - Inventory
@@ -98,12 +116,14 @@ class GameViewModel: ObservableObject {
     func useMeal(at index: Int) {
         inventoryViewModel.useMeal(at: index, player: &player, effectiveMaxHealth: effectiveMaxHealth)
         if player.health != lastHealth {
+            HapticService.shared.success()
             lastHealth = player.health
             saveCurrentProfile()
         }
     }
 
     func startGameLoop() {
+        HapticService.shared.prepare()
         gameLoopCancellable = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -128,6 +148,7 @@ class GameViewModel: ObservableObject {
 
     func createSaveProfile() -> SaveProfile {
         let sailboatPos = sailboat.map { CodablePoint($0.position) }
+        let slimeData = slimes.map { $0.toSaveData() }
 
         // if sailing, save the board position (last land position) and not sailing
         if player.isSailing, let landPosition = player.sailingBoardPosition {
@@ -135,7 +156,7 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSailing = false
             landPlayer.sailingBoardPosition = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
         }
 
         // if swimming, save the last land position instead of current water position
@@ -144,10 +165,10 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSwimming = false
             landPlayer.swimStartPoint = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
         }
 
-        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos)
+        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
     }
 
     func saveCurrentProfile() {
@@ -187,7 +208,7 @@ class GameViewModel: ObservableObject {
         let willDie = player.health <= 1
 
         if willDie {
-            // store positions for respawn
+            HapticService.shared.error()
             deathPosition = player.position
             respawnLandPosition = startPoint
         }
@@ -211,7 +232,8 @@ class GameViewModel: ObservableObject {
             player.position = startPoint
             player.isSwimming = false
             player.swimStartPoint = nil
-            player.health = max(0, player.health - 1)
+            player.health = max(0, player.health - 1) // drowning costs 1 heart
+            HapticService.shared.warning()
 
             if player.health != lastHealth {
                 lastHealth = player.health
@@ -228,6 +250,7 @@ class GameViewModel: ObservableObject {
     }
 
     func respawn() {
+        HapticService.shared.success()
         // if died in water, respawn at last land position; otherwise at death position
         let respawnPosition = respawnLandPosition ?? deathPosition ?? player.position
 
@@ -277,6 +300,10 @@ class GameViewModel: ObservableObject {
 
         updateAttackAnimation(deltaTime: deltaTime)
         updateStamina(deltaTime: deltaTime, isMoving: isMoving)
+        updateSlimes(deltaTime: deltaTime)
+        checkSlimeContactDamage()
+        checkSwordHits()
+        updateDeathEffects(deltaTime: deltaTime)
 
         // handle sailing movement
         if player.isSailing {
@@ -385,8 +412,8 @@ class GameViewModel: ObservableObject {
     }
 
     private func canSailTo(_ position: CGPoint) -> Bool {
-        // boat hitbox: 32x32 sprite with 9px inset on each side = 14x14 collision
-        let halfSize: CGFloat = 7
+        // boat hitbox: 64x64 sprite with 18px inset on each side = 28x28 collision
+        let halfSize: CGFloat = 14
 
         let leftTile = Int(floor((position.x - halfSize) / tileSize))
         let rightTile = Int(floor((position.x + halfSize - 0.01) / tileSize))
@@ -465,6 +492,7 @@ class GameViewModel: ObservableObject {
     func equipTool(_ tool: ToolType?) {
         player.equippedTool = tool
         isToolMenuOpen = false
+        HapticService.shared.light()
     }
 
     func openToolMenu() {
@@ -528,9 +556,11 @@ class GameViewModel: ObservableObject {
     func useAxe() {
         if isFacingTree() {
             _ = inventoryViewModel.addItem(.resource(type: .wood, quantity: 1))
+            HapticService.shared.medium()
             saveCurrentProfile()
         } else if isFacingRock() {
             _ = inventoryViewModel.addItem(.resource(type: .stone, quantity: 1))
+            HapticService.shared.medium()
             saveCurrentProfile()
         }
     }
@@ -539,12 +569,19 @@ class GameViewModel: ObservableObject {
 
     func startSwordSwing() {
         guard !player.isAttacking else { return }
+        HapticService.shared.medium()
         player.isAttacking = true
         player.attackAnimationFrame = 1
         player.attackAnimationTime = 0
+        player.attackSwingId += 1
     }
 
     private func updateAttackAnimation(deltaTime: CGFloat) {
+        // decrement invincibility timer
+        if player.invincibilityTimer > 0 {
+            player.invincibilityTimer = max(0, player.invincibilityTimer - deltaTime)
+        }
+
         guard player.isAttacking else { return }
 
         player.attackAnimationTime += deltaTime
@@ -664,6 +701,7 @@ class GameViewModel: ObservableObject {
     }
 
     func showFishingLevelUp(_ level: Int) {
+        HapticService.shared.success()
         levelUpNotificationLevel = level
         showLevelUpNotification = true
 
@@ -693,7 +731,7 @@ class GameViewModel: ObservableObject {
     }
 
     var isNearSailboat: Bool {
-        guard let boat = sailboat, !player.isSailing, !player.isSwimming else { return false }
+        guard let boat = sailboat, !player.isSailing else { return false }
         let distance = hypot(player.position.x - boat.position.x,
                              player.position.y - boat.position.y)
         return distance < tileSize * 2.0
@@ -714,6 +752,7 @@ class GameViewModel: ObservableObject {
 
     func summonSailboat() {
         guard canSummonSailboat else { return }
+        HapticService.shared.medium()
 
         let playerTileX = Int(player.position.x / tileSize)
         let playerTileY = Int(player.position.y / tileSize)
@@ -732,6 +771,7 @@ class GameViewModel: ObservableObject {
 
     func boardSailboat() {
         guard let boat = sailboat, isNearSailboat else { return }
+        HapticService.shared.medium()
 
         player.sailingBoardPosition = player.position // save land position before boarding
         player.position = boat.position
@@ -743,6 +783,7 @@ class GameViewModel: ObservableObject {
 
     func disembark() {
         guard player.isSailing, isNearLandWhileSailing else { return }
+        HapticService.shared.light()
 
         // keep sailboat at current position and rotation
         sailboat?.position = player.position
@@ -783,17 +824,275 @@ class GameViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Enemies
+
+    private func updateSlimes(deltaTime: CGFloat) {
+        for i in 0..<slimes.count {
+            guard slimes[i].isAlive else { continue }
+
+            // decrement hit flash
+            if slimes[i].hitFlashTimer > 0 {
+                slimes[i].hitFlashTimer = max(0, slimes[i].hitFlashTimer - deltaTime)
+            }
+
+            let distToPlayer = hypot(
+                player.position.x - slimes[i].position.x,
+                player.position.y - slimes[i].position.y
+            )
+
+            // state transitions
+            switch slimes[i].aiState {
+            case .patrol:
+                if distToPlayer <= Slime.chaseRadius {
+                    slimes[i].aiState = .chase
+                }
+            case .chase:
+                if distToPlayer > Slime.chaseRadius {
+                    slimes[i].aiState = .returning
+                }
+            case .returning:
+                if distToPlayer <= Slime.chaseRadius {
+                    slimes[i].aiState = .chase
+                }
+                let distToSpawn = hypot(
+                    slimes[i].spawnOrigin.x - slimes[i].position.x,
+                    slimes[i].spawnOrigin.y - slimes[i].position.y
+                )
+                if distToSpawn < tileSize {
+                    slimes[i].aiState = .patrol(target: slimes[i].spawnOrigin)
+                }
+            }
+
+            // movement
+            switch slimes[i].aiState {
+            case .patrol(let target):
+                moveSlime(index: i, toward: target, speed: Slime.patrolSpeed, deltaTime: deltaTime)
+                let distToTarget = hypot(target.x - slimes[i].position.x, target.y - slimes[i].position.y)
+                if distToTarget < 4 {
+                    slimes[i].patrolPauseTimer = CGFloat.random(in: 1.0...2.0)
+                    slimes[i].aiState = .patrol(target: randomPatrolTarget(for: slimes[i]))
+                }
+                if slimes[i].patrolPauseTimer > 0 {
+                    slimes[i].patrolPauseTimer -= deltaTime
+                }
+            case .chase:
+                moveSlime(index: i, toward: player.position, speed: Slime.chaseSpeed, deltaTime: deltaTime)
+            case .returning:
+                moveSlime(index: i, toward: slimes[i].spawnOrigin, speed: Slime.patrolSpeed, deltaTime: deltaTime)
+            }
+        }
+    }
+
+    private func moveSlime(index: Int, toward target: CGPoint, speed: CGFloat, deltaTime: CGFloat) {
+        // skip if pausing during patrol
+        if case .patrol = slimes[index].aiState, slimes[index].patrolPauseTimer > 0 {
+            return
+        }
+
+        let dx = target.x - slimes[index].position.x
+        let dy = target.y - slimes[index].position.y
+        let dist = hypot(dx, dy)
+        guard dist > 1 else { return }
+
+        let moveX = (dx / dist) * speed * deltaTime
+        let moveY = (dy / dist) * speed * deltaTime
+
+        let newPos = CGPoint(x: slimes[index].position.x + moveX, y: slimes[index].position.y + moveY)
+        if slimeCanMoveTo(newPos) {
+            slimes[index].position = newPos
+        } else {
+            // slide movement
+            let slideX = CGPoint(x: slimes[index].position.x + moveX, y: slimes[index].position.y)
+            if slimeCanMoveTo(slideX) {
+                slimes[index].position = slideX
+            }
+            let slideY = CGPoint(x: slimes[index].position.x, y: slimes[index].position.y + moveY)
+            if slimeCanMoveTo(slideY) {
+                slimes[index].position = slideY
+            }
+        }
+    }
+
+    private func randomPatrolTarget(for slime: Slime) -> CGPoint {
+        let angle = CGFloat.random(in: 0...(2 * .pi))
+        let dist = CGFloat.random(in: 20...Slime.patrolRadius)
+        let target = CGPoint(
+            x: slime.spawnOrigin.x + cos(angle) * dist,
+            y: slime.spawnOrigin.y + sin(angle) * dist
+        )
+        // validate the target is walkable
+        if slimeCanMoveTo(target) { return target }
+        return slime.spawnOrigin // fallback to spawn if target is invalid
+    }
+
+    private func slimeCanMoveTo(_ position: CGPoint) -> Bool {
+        let half = Slime.halfSize
+        let leftTile = Int(floor((position.x - half) / tileSize))
+        let rightTile = Int(floor((position.x + half - 0.01) / tileSize))
+        let topTile = Int(floor((position.y - half) / tileSize))
+        let bottomTile = Int(floor((position.y + half - 0.01) / tileSize))
+
+        for tileY in topTile...bottomTile {
+            for tileX in leftTile...rightTile {
+                let tile = world.tile(at: tileX, y: tileY)
+                if !tile.isWalkable { return false }
+            }
+        }
+
+        let slimeRect = CGRect(x: position.x - half, y: position.y - half, width: Slime.size, height: Slime.size)
+        for rock in world.rockOverlays {
+            if slimeRect.intersects(rock.collisionRect(tileSize: tileSize)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    // MARK: - Combat
+
+    private func checkSlimeContactDamage() {
+        guard !player.isInvincible && !player.isSailing && !isDead else { return }
+
+        let playerRect = CGRect(
+            x: player.position.x - 12,
+            y: player.position.y - 16,
+            width: 24, height: 32
+        )
+
+        for i in 0..<slimes.count {
+            guard slimes[i].isAlive else { continue }
+            guard playerRect.intersects(slimes[i].collisionRect) else { continue }
+
+            // deal half-heart damage
+            player.health = max(0, player.health - Slime.contactDamage)
+            player.invincibilityTimer = Player.invincibilityDuration
+            lastHealth = player.health
+
+            // knockback player away from slime
+            let dir = CGPoint(
+                x: player.position.x - slimes[i].position.x,
+                y: player.position.y - slimes[i].position.y
+            )
+            applyKnockback(position: &player.position, direction: dir, distance: Slime.knockbackDistance, halfWidth: 12, halfHeight: 16)
+            HapticService.shared.heavy()
+
+            // check death
+            if player.health <= 0 {
+                deathPosition = player.position
+                respawnLandPosition = player.position
+                HapticService.shared.error()
+                saveCurrentProfile()
+                isDead = true
+            }
+            return // only process one hit per frame
+        }
+    }
+
+    private func checkSwordHits() {
+        guard player.isAttacking else { return }
+        guard let hitbox = swordHitbox() else { return }
+
+        for i in 0..<slimes.count {
+            guard slimes[i].isAlive else { continue }
+            guard slimes[i].hitCooldown != player.attackSwingId else { continue }
+            guard hitbox.intersects(slimes[i].collisionRect) else { continue }
+
+            // deal damage
+            slimes[i].health -= 1
+            slimes[i].hitCooldown = player.attackSwingId
+            slimes[i].hitFlashTimer = Slime.hitFlashDuration
+            HapticService.shared.medium()
+
+            // knockback slime in facing direction
+            let (dx, dy) = facingOffset()
+            let dir = CGPoint(x: CGFloat(dx), y: CGFloat(dy))
+            applyKnockback(position: &slimes[i].position, direction: dir, distance: Slime.knockbackDistance, halfWidth: Slime.halfSize, halfHeight: Slime.halfSize)
+
+            // check slime death
+            if slimes[i].health <= 0 {
+                slimes[i].isAlive = false
+                deathEffects.append(SlimeDeathEffect(position: slimes[i].position))
+                HapticService.shared.heavy()
+            }
+        }
+    }
+
+    private func swordHitbox() -> CGRect? {
+        guard player.isAttacking else { return nil }
+        let reach: CGFloat = 20
+        let hitboxSize: CGFloat = 28
+        let half = hitboxSize / 2
+
+        let cx: CGFloat
+        let cy: CGFloat
+        switch player.facingDirection {
+        case .up:    cx = player.position.x; cy = player.position.y - reach
+        case .down:  cx = player.position.x; cy = player.position.y + reach
+        case .left:  cx = player.position.x - reach; cy = player.position.y
+        case .right: cx = player.position.x + reach; cy = player.position.y
+        }
+        return CGRect(x: cx - half, y: cy - half, width: hitboxSize, height: hitboxSize)
+    }
+
+    private func applyKnockback(position: inout CGPoint, direction: CGPoint, distance: CGFloat, halfWidth: CGFloat, halfHeight: CGFloat) {
+        let length = hypot(direction.x, direction.y)
+        guard length > 0 else { return }
+        let nx = direction.x / length
+        let ny = direction.y / length
+
+        // apply in steps to respect collision
+        let steps = 4
+        let stepDist = distance / CGFloat(steps)
+        for _ in 0..<steps {
+            let newPos = CGPoint(x: position.x + nx * stepDist, y: position.y + ny * stepDist)
+            if canEntityMoveTo(newPos, halfWidth: halfWidth, halfHeight: halfHeight) {
+                position = newPos
+            } else {
+                break
+            }
+        }
+    }
+
+    private func canEntityMoveTo(_ position: CGPoint, halfWidth: CGFloat, halfHeight: CGFloat) -> Bool {
+        let leftTile = Int(floor((position.x - halfWidth) / tileSize))
+        let rightTile = Int(floor((position.x + halfWidth - 0.01) / tileSize))
+        let topTile = Int(floor((position.y - halfHeight) / tileSize))
+        let bottomTile = Int(floor((position.y + halfHeight - 0.01) / tileSize))
+
+        for tileY in topTile...bottomTile {
+            for tileX in leftTile...rightTile {
+                let tile = world.tile(at: tileX, y: tileY)
+                if !tile.isWalkable && !tile.isSwimmable { return false }
+            }
+        }
+
+        let entityRect = CGRect(x: position.x - halfWidth, y: position.y - halfHeight, width: halfWidth * 2, height: halfHeight * 2)
+        for rock in world.rockOverlays {
+            if entityRect.intersects(rock.collisionRect(tileSize: tileSize)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private func updateDeathEffects(deltaTime: CGFloat) {
+        for i in (0..<deathEffects.count).reversed() {
+            deathEffects[i].elapsed += deltaTime
+            if deathEffects[i].elapsed >= SlimeDeathEffect.duration {
+                deathEffects.remove(at: i)
+            }
+        }
+    }
+
     // MARK: - Map/Teleport
 
     var isOnTeleportPad: Bool {
         guard !player.isSailing, !player.isSwimming else { return false }
-        let playerTileX = Int(player.position.x / tileSize)
-        let playerTileY = Int(player.position.y / tileSize)
-        return world.tile(at: playerTileX, y: playerTileY) == .teleportPad
+        return currentTeleportPad != nil
     }
 
     var currentTeleportPad: TeleportPad? {
-        guard isOnTeleportPad else { return nil }
+        guard !player.isSailing, !player.isSwimming else { return nil }
         let playerTileX = Int(player.position.x / tileSize)
         let playerTileY = Int(player.position.y / tileSize)
         return world.teleportPads.first { $0.tileX == playerTileX && $0.tileY == playerTileY }
@@ -815,8 +1114,27 @@ class GameViewModel: ObservableObject {
             closeMap()
             return
         }
-        player.position = pad.worldPosition
+
+        // close map immediately
         closeMap()
-        saveCurrentProfile()
+
+        // fade to black
+        withAnimation(.easeIn(duration: 0.3)) {
+            screenFadeOpacity = 1
+        }
+
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+
+            // teleport player
+            HapticService.shared.heavy()
+            player.position = pad.worldPosition
+            saveCurrentProfile()
+
+            // fade back in
+            withAnimation(.easeOut(duration: 0.3)) {
+                screenFadeOpacity = 0
+            }
+        }
     }
 }

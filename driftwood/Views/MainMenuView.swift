@@ -13,21 +13,21 @@ struct MainMenuView: View {
             Color.black
                 .ignoresSafeArea()
 
-            VStack(spacing: 60) {
+            VStack(spacing: Theme.Spacing.colossal) {
                 Text("Driftwood Kingdom")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(Theme.Font.titleLarge)
+                    .foregroundColor(Theme.Color.textPrimary)
 
                 Button(action: onPlayTapped) {
                     Text("Play")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 180, height: 60)
-                        .background(Color.green.opacity(0.8))
-                        .cornerRadius(12)
+                        .font(Theme.Font.titleSemibold)
+                        .foregroundColor(Theme.Color.textPrimary)
+                        .frame(width: Theme.Size.menuButtonWidth, height: Theme.Size.menuButtonHeight)
+                        .background(Theme.Color.buttonPositive)
+                        .cornerRadius(Theme.Radius.panel)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: Theme.Radius.panel)
+                                .stroke(Theme.Color.borderLight, lineWidth: Theme.Border.standard)
                         )
                 }
             }
