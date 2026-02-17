@@ -10,7 +10,6 @@ struct InventoryButton: View {
 
     var body: some View {
         Button(action: {
-            HapticService.shared.selection()
             onTap()
         }) {
             ZStack {

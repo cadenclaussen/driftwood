@@ -116,14 +116,12 @@ class GameViewModel: ObservableObject {
     func useMeal(at index: Int) {
         inventoryViewModel.useMeal(at: index, player: &player, effectiveMaxHealth: effectiveMaxHealth)
         if player.health != lastHealth {
-            HapticService.shared.success()
             lastHealth = player.health
             saveCurrentProfile()
         }
     }
 
     func startGameLoop() {
-        HapticService.shared.prepare()
         gameLoopCancellable = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -208,7 +206,6 @@ class GameViewModel: ObservableObject {
         let willDie = player.health <= 1
 
         if willDie {
-            HapticService.shared.error()
             deathPosition = player.position
             respawnLandPosition = startPoint
         }
@@ -233,7 +230,6 @@ class GameViewModel: ObservableObject {
             player.isSwimming = false
             player.swimStartPoint = nil
             player.health = max(0, player.health - 1) // drowning costs 1 heart
-            HapticService.shared.warning()
 
             if player.health != lastHealth {
                 lastHealth = player.health
@@ -250,7 +246,6 @@ class GameViewModel: ObservableObject {
     }
 
     func respawn() {
-        HapticService.shared.success()
         // if died in water, respawn at last land position; otherwise at death position
         let respawnPosition = respawnLandPosition ?? deathPosition ?? player.position
 
@@ -492,7 +487,6 @@ class GameViewModel: ObservableObject {
     func equipTool(_ tool: ToolType?) {
         player.equippedTool = tool
         isToolMenuOpen = false
-        HapticService.shared.light()
     }
 
     func openToolMenu() {
@@ -556,11 +550,9 @@ class GameViewModel: ObservableObject {
     func useAxe() {
         if isFacingTree() {
             _ = inventoryViewModel.addItem(.resource(type: .wood, quantity: 1))
-            HapticService.shared.medium()
             saveCurrentProfile()
         } else if isFacingRock() {
             _ = inventoryViewModel.addItem(.resource(type: .stone, quantity: 1))
-            HapticService.shared.medium()
             saveCurrentProfile()
         }
     }
@@ -569,7 +561,6 @@ class GameViewModel: ObservableObject {
 
     func startSwordSwing() {
         guard !player.isAttacking else { return }
-        HapticService.shared.medium()
         player.isAttacking = true
         player.attackAnimationFrame = 1
         player.attackAnimationTime = 0
@@ -701,7 +692,6 @@ class GameViewModel: ObservableObject {
     }
 
     func showFishingLevelUp(_ level: Int) {
-        HapticService.shared.success()
         levelUpNotificationLevel = level
         showLevelUpNotification = true
 
@@ -752,7 +742,6 @@ class GameViewModel: ObservableObject {
 
     func summonSailboat() {
         guard canSummonSailboat else { return }
-        HapticService.shared.medium()
 
         let playerTileX = Int(player.position.x / tileSize)
         let playerTileY = Int(player.position.y / tileSize)
@@ -771,7 +760,6 @@ class GameViewModel: ObservableObject {
 
     func boardSailboat() {
         guard let boat = sailboat, isNearSailboat else { return }
-        HapticService.shared.medium()
 
         player.sailingBoardPosition = player.position // save land position before boarding
         player.position = boat.position
@@ -783,7 +771,6 @@ class GameViewModel: ObservableObject {
 
     func disembark() {
         guard player.isSailing, isNearLandWhileSailing else { return }
-        HapticService.shared.light()
 
         // keep sailboat at current position and rotation
         sailboat?.position = player.position
@@ -974,13 +961,11 @@ class GameViewModel: ObservableObject {
                 y: player.position.y - slimes[i].position.y
             )
             applyKnockback(position: &player.position, direction: dir, distance: Slime.knockbackDistance, halfWidth: 12, halfHeight: 16)
-            HapticService.shared.heavy()
 
             // check death
             if player.health <= 0 {
                 deathPosition = player.position
                 respawnLandPosition = player.position
-                HapticService.shared.error()
                 saveCurrentProfile()
                 isDead = true
             }
@@ -1001,7 +986,6 @@ class GameViewModel: ObservableObject {
             slimes[i].health -= 1
             slimes[i].hitCooldown = player.attackSwingId
             slimes[i].hitFlashTimer = Slime.hitFlashDuration
-            HapticService.shared.medium()
 
             // knockback slime in facing direction
             let (dx, dy) = facingOffset()
@@ -1012,7 +996,6 @@ class GameViewModel: ObservableObject {
             if slimes[i].health <= 0 {
                 slimes[i].isAlive = false
                 deathEffects.append(SlimeDeathEffect(position: slimes[i].position))
-                HapticService.shared.heavy()
             }
         }
     }
@@ -1127,7 +1110,6 @@ class GameViewModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(500))
 
             // teleport player
-            HapticService.shared.heavy()
             player.position = pad.worldPosition
             saveCurrentProfile()
 

@@ -127,13 +127,6 @@ class FishingViewModel: ObservableObject {
 
         lastCatchResult = result
 
-        switch result {
-        case .perfect: HapticService.shared.success()
-        case .success: HapticService.shared.medium()
-        case .miss: HapticService.shared.warning()
-        case .noCatch: HapticService.shared.light()
-        }
-
         if result.isSuccess {
             // perfect catches don't consume a catch
             if !result.isPerfect {

@@ -158,7 +158,6 @@ class InventoryViewModel: ObservableObject {
     // MARK: - Equipment
 
     func equipArmor(_ piece: ArmorPiece, from slotIndex: Int) {
-        HapticService.shared.light()
         let oldPiece = inventory.equipment.equip(piece)
         inventory.collectibles[slotIndex].clear()
 
@@ -169,12 +168,10 @@ class InventoryViewModel: ObservableObject {
 
     func unequipArmor(_ slot: ArmorSlotType) {
         guard let piece = inventory.equipment.unequip(slot) else { return }
-        HapticService.shared.light()
         _ = addItem(.armor(piece: piece))
     }
 
     func equipAccessory(_ accessory: Accessory, from slotIndex: Int) {
-        HapticService.shared.light()
         let oldAccessory = inventory.accessories.equip(accessory)
         inventory.collectibles[slotIndex].clear()
 
@@ -185,7 +182,6 @@ class InventoryViewModel: ObservableObject {
 
     func unequipAccessory(_ slot: AccessorySlotType) {
         guard let accessory = inventory.accessories.unequip(slot) else { return }
-        HapticService.shared.light()
         _ = addItem(.accessory(item: accessory))
     }
 
@@ -378,7 +374,6 @@ class InventoryViewModel: ObservableObject {
             updateCachedRecipes()
         }
 
-        HapticService.shared.success()
         return true
     }
 

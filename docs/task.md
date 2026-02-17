@@ -79,3 +79,30 @@
 - **Failure Count**: 0
 - **Failures**: None
 - **Solution**: Reverted health from 10-based (half-hearts) to 5-based (full hearts). Player maxHealth 10→5. HeartsView simplified to full/empty only. Slime contactDamage=1 (1 full heart). Drowning costs 1 heart (was 2 HP). Meal heals halved (basic=2, heart=3, stamina=1). ToolInventory: swordTier=1, axeTier=1 by default. effectiveMaxHealth uses Int(bonusHearts) instead of *2. Build verified.
+
+### 38. Replace sword swing up animation sprites
+- **Status**: COMPLETED
+- **Type**: Feature
+- **Location**: Assets.xcassets/PixelArt/SwordSwingUp*.imageset/
+- **Requested**: User provided 12 updated sword swing up animation frames (swing-sword-up-1 through swing-sword-up-12). Replace the existing 12 SwordSwingUp sprites in the asset catalog with the new files.
+- **Context**: User redrew the sword swing up animations in pixilart. New files are 32x32 same as existing.
+- **Acceptance Criteria**:
+  - [x] All 12 SwordSwingUp PNGs replaced with new versions
+  - [x] Build succeeds
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Copied all 12 new swing-sword-up-N.png files to their corresponding SwordSwingUpN.imageset directories. Files were already 32x32 matching existing dimensions. Build verified.
+
+### 39. Remove haptic feedback system
+- **Status**: COMPLETED
+- **Type**: Bug
+- **Location**: HapticService.swift, GameViewModel, FishingViewModel, InventoryViewModel, UI Views
+- **Requested**: Remove all haptic feedback from the app. Not implemented properly.
+- **Context**: Haptics were added in task 36 but user says they aren't done properly. Remove entirely.
+- **Acceptance Criteria**:
+  - [x] HapticService.swift deleted
+  - [x] All HapticService calls removed from all files
+  - [x] Build succeeds
+- **Failure Count**: 0
+- **Failures**: None
+- **Solution**: Deleted HapticService.swift. Removed 18 HapticService calls from GameViewModel (combat, sailing, tools, teleport, respawn, death, game loop), 4 from FishingViewModel (catch results), 5 from InventoryViewModel (equip/unequip/craft), and 1 each from InventorySlotView, DeathScreenView, MenuButton, InventoryButton. Build verified.

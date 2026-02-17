@@ -34,7 +34,6 @@ struct DeathScreenView: View {
                     }
 
                     Button(action: {
-                        HapticService.shared.selection()
                         onMainMenu()
                     }) {
                         Text("Main Menu")

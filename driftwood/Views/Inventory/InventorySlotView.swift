@@ -28,7 +28,6 @@ struct InventorySlotView: View {
         }
         .frame(width: slotSize, height: slotSize)
         .onTapGesture {
-            HapticService.shared.selection()
             onTap()
         }
     }
