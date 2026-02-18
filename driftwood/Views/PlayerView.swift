@@ -11,17 +11,19 @@ struct PlayerView: View {
     let isWalking: Bool
     let isAttacking: Bool
     let attackFrame: Int
+    let equippedTool: ToolType?
 
-    init(size: CGFloat, facingDirection: FacingDirection, isWalking: Bool = false, isAttacking: Bool = false, attackFrame: Int = 0) {
+    init(size: CGFloat, facingDirection: FacingDirection, isWalking: Bool = false, isAttacking: Bool = false, attackFrame: Int = 0, equippedTool: ToolType? = nil) {
         self.size = size
         self.facingDirection = facingDirection
         self.isWalking = isWalking
         self.isAttacking = isAttacking
         self.attackFrame = attackFrame
+        self.equippedTool = equippedTool
     }
 
     private var currentSpriteName: String {
-        if isAttacking, let attackSprite = facingDirection.attackSpriteName(frame: attackFrame) {
+        if isAttacking, let attackSprite = facingDirection.attackSpriteName(frame: attackFrame, tool: equippedTool) {
             return attackSprite
         }
         return isWalking ? facingDirection.walkSpriteName : facingDirection.idleSpriteName

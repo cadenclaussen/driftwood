@@ -26,9 +26,16 @@ enum FacingDirection: String, Codable {
         }
     }
 
-    func attackSpriteName(frame: Int) -> String? {
-        // all directions use SwordSwingUp sprites; view applies transforms
-        return "SwordSwingUp\(frame)"
+    func attackSpriteName(frame: Int, tool: ToolType?) -> String? {
+        // all directions use same sprites; view applies transforms
+        let prefix: String
+        switch tool {
+        case .axe:
+            prefix = "AxeSwingUp"
+        case .sword, .fishingRod, nil:
+            prefix = "SwordSwingUp"
+        }
+        return "\(prefix)\(frame)"
     }
 
     static func from(direction: CGPoint) -> FacingDirection {
@@ -59,8 +66,12 @@ struct Player {
     let staminaRegenRate: CGFloat = 20 // full bar (100) in 5 seconds
 
     // magic system
-    var magic: CGFloat = 100
-    let maxMagic: CGFloat = 100
+    var mp: CGFloat = 50
+    let baseMaxMp: CGFloat = 50
+
+    // dash state
+    var isDashing: Bool = false
+    static let dashDuration: CGFloat = 0.1
 
     // sprinting
     var isSprinting: Bool = false
@@ -77,12 +88,14 @@ struct Player {
     var attackAnimationFrame: Int = 0
     var attackAnimationTime: CGFloat = 0
     var attackSwingId: Int = 0 // increments each swing, used for hit-once-per-swing tracking
+    var currentSwingDamage: Int = 1 // base damage, can be multiplied by charge
+    var isChargedAttack: Bool = false // true if this swing is from a charged attack (AoE)
     static let attackFrameDuration: CGFloat = 0.03 // 30ms per frame
     static let attackFrameCount: Int = 12
 
-    // invincibility frames (after taking enemy damage)
+    // invincibility frames (after taking enemy damage or during dash)
     var invincibilityTimer: CGFloat = 0
-    var isInvincible: Bool { invincibilityTimer > 0 }
+    var isInvincible: Bool { invincibilityTimer > 0 || isDashing }
     static let invincibilityDuration: CGFloat = 0.5
 
     // swimming
@@ -96,6 +109,24 @@ struct Player {
     var isSailing: Bool = false
     var sailingBoardPosition: CGPoint? = nil // where player boarded from (for save/respawn)
     let sailingSpeedMultiplier: CGFloat = 3.0 // 3x swim speed = 1.5x walk speed
+
+    // block state
+    var isBlocking: Bool = false
+    var blockStartTime: TimeInterval = 0
+    var blockCooldownTimer: CGFloat = 0
+
+    // charge state
+    var isCharging: Bool = false
+    var chargeStartTime: TimeInterval = 0
+    var chargeProgress: CGFloat = 0 // 0.0 to 1.0
+
+    // block/charge constants
+    static let blockDuration: CGFloat = 0.6
+    static let parryWindow: CGFloat = 0.15
+    static let blockCooldown: CGFloat = 0.3
+    static let chargeTime: CGFloat = 1.0
+    static let maxChargeDamageMultiplier: CGFloat = 2.0
+    static let chargingMoveSpeedMultiplier: CGFloat = 0.5
 
     init(startPosition: CGPoint) {
         self.position = startPosition

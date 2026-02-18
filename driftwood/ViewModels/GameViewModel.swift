@@ -6,6 +6,12 @@
 import SwiftUI
 import Combine
 
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
+
 @MainActor
 class GameViewModel: ObservableObject {
     @Published var player: Player
@@ -21,6 +27,17 @@ class GameViewModel: ObservableObject {
     @Published var fishingViewModel: FishingViewModel?
     @Published var fishingState: FishingState = FishingState()
 
+    // magic state
+    @Published var magicState: MagicState = MagicState()
+    @Published var magicViewModel: MagicViewModel = MagicViewModel()
+    @Published var mpBarFlashing: Bool = false
+    var timeSinceLastCast: CGFloat = 0
+
+    // dash animation state
+    var dashStartPosition: CGPoint?
+    var dashTargetPosition: CGPoint?
+    let dashSpeed: CGFloat = 800 // pixels per second
+
     // notifications
     @Published var showLevelUpNotification: Bool = false
     @Published var levelUpNotificationLevel: Int = 0
@@ -32,10 +49,14 @@ class GameViewModel: ObservableObject {
     // enemy state
     @Published var slimes: [Slime] = []
     @Published var deathEffects: [SlimeDeathEffect] = []
+    @Published var parryFlashEffects: [ParryFlashEffect] = []
 
     // map/teleport state
     @Published var isMapOpen: Bool = false
     @Published var isMapTeleportMode: Bool = false
+
+    // environment state (day/night and weather)
+    @Published var environmentState: EnvironmentState = EnvironmentState()
 
     @Published var joystickOffset: CGSize = .zero
     @Published var screenFadeOpacity: Double = 0
@@ -47,6 +68,10 @@ class GameViewModel: ObservableObject {
     var effectiveMaxHealth: Int {
         let bonusHearts = inventoryViewModel.inventory.equipment.totalStats.bonusHearts
         return player.maxHealth + Int(bonusHearts)
+    }
+
+    var effectiveMaxMp: CGFloat {
+        player.baseMaxMp + magicState.bonusMaxMp
     }
 
     var currentProfileIndex: Int
@@ -67,12 +92,15 @@ class GameViewModel: ObservableObject {
         player.facingDirection = profile.facingDirection ?? FacingDirection.from(direction: profile.lookDirection.cgPoint)
         player.health = profile.health
         player.stamina = profile.stamina
-        player.magic = profile.magic
+        player.mp = profile.mp
         self.player = player
         self.lastHealth = profile.health
 
         // load fishing state
         self.fishingState = profile.fishingState
+
+        // load magic state (with migration for old saves)
+        self.magicState = profile.magicState ?? MagicState()
         self.player.equippedTool = profile.equippedTool
 
         // load sailing state (only if boat exists)
@@ -97,6 +125,9 @@ class GameViewModel: ObservableObject {
         } else {
             self.slimes = World.defaultSlimeSpawns()
         }
+
+        // load environment state (with migration for old saves)
+        self.environmentState = profile.environmentState ?? EnvironmentState()
     }
 
     // MARK: - Inventory
@@ -154,7 +185,7 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSailing = false
             landPlayer.sailingBoardPosition = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, magicState: magicState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData, environmentState: environmentState)
         }
 
         // if swimming, save the last land position instead of current water position
@@ -163,10 +194,10 @@ class GameViewModel: ObservableObject {
             landPlayer.position = landPosition
             landPlayer.isSwimming = false
             landPlayer.swimStartPoint = nil
-            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
+            return SaveProfile(from: landPlayer, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, magicState: magicState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData, environmentState: environmentState)
         }
 
-        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData)
+        return SaveProfile(from: player, id: currentProfileIndex, inventory: inventoryViewModel.inventory, fishingState: fishingState, magicState: magicState, equippedTool: player.equippedTool, sailboatPosition: sailboatPos, slimes: slimeData, environmentState: environmentState)
     }
 
     func saveCurrentProfile() {
@@ -245,6 +276,504 @@ class GameViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Magic/MP
+
+    private func updateMpRegen(deltaTime: CGFloat) {
+        timeSinceLastCast += deltaTime
+
+        // base regen: 10 MP/s, bonus after 2s: 20 MP/s
+        let regenRate: CGFloat = timeSinceLastCast >= 2.0 ? 20 : 10
+        if player.mp < effectiveMaxMp {
+            player.mp = min(player.mp + regenRate * deltaTime, effectiveMaxMp)
+        }
+    }
+
+    private func updateMagic(deltaTime: CGFloat) {
+        magicViewModel.update(deltaTime: deltaTime)
+
+        // check for fireball collisions
+        checkFireballCollisions()
+
+        // apply tornado pull to enemies
+        applyTornadoPull(deltaTime: deltaTime)
+
+        // update dash animation
+        updateDash(deltaTime: deltaTime)
+    }
+
+    private func checkFireballCollisions() {
+        var projectilesToRemove: [UUID] = []
+
+        for projectile in magicViewModel.projectiles {
+            // check enemy collision
+            var hitEnemy = false
+            for i in slimes.indices {
+                guard slimes[i].isAlive else { continue }
+                let dx = slimes[i].position.x - projectile.position.x
+                let dy = slimes[i].position.y - projectile.position.y
+                let distance = sqrt(dx * dx + dy * dy)
+                if distance < Slime.halfSize + 8 { // projectile radius ~8
+                    hitEnemy = true
+                    break
+                }
+            }
+
+            // check obstacle collision (tile-based)
+            let tileX = Int(projectile.position.x / tileSize)
+            let tileY = Int(projectile.position.y / tileSize)
+            let tile = world.tiles[safe: tileY]?[safe: tileX]
+            var hitObstacle = tile?.blocksProjectiles ?? true
+
+            // check rock collision bounds
+            if !hitObstacle {
+                let projectileRadius: CGFloat = 8
+                let projectileRect = CGRect(
+                    x: projectile.position.x - projectileRadius,
+                    y: projectile.position.y - projectileRadius,
+                    width: projectileRadius * 2,
+                    height: projectileRadius * 2
+                )
+                for rock in world.rockOverlays {
+                    if projectileRect.intersects(rock.collisionRect(tileSize: tileSize)) {
+                        hitObstacle = true
+                        break
+                    }
+                }
+            }
+
+            if hitEnemy || hitObstacle {
+                // create explosion and deal AoE damage
+                magicViewModel.createExplosion(at: projectile.position)
+                dealFireballAoeDamage(at: projectile.position, radius: projectile.aoeRadius, damage: projectile.damage)
+                projectilesToRemove.append(projectile.id)
+            }
+        }
+
+        for id in projectilesToRemove {
+            magicViewModel.removeProjectile(id: id)
+        }
+    }
+
+    private func dealFireballAoeDamage(at position: CGPoint, radius: CGFloat, damage: Int) {
+        for i in slimes.indices {
+            guard slimes[i].isAlive else { continue }
+            let dx = slimes[i].position.x - position.x
+            let dy = slimes[i].position.y - position.y
+            let distance = sqrt(dx * dx + dy * dy)
+            if distance <= radius {
+                damageSlime(index: i, damage: damage)
+            }
+        }
+    }
+
+    private func applyTornadoPull(deltaTime: CGFloat) {
+        for tornado in magicViewModel.tornados {
+            guard tornado.isActive else { continue }
+            for i in slimes.indices {
+                guard slimes[i].isAlive else { continue }
+                if tornado.containsPoint(slimes[i].position) {
+                    let dir = tornado.pullDirection(from: slimes[i].position)
+                    let pullAmount = tornado.pullForce * deltaTime
+                    slimes[i].position.x += dir.x * pullAmount
+                    slimes[i].position.y += dir.y * pullAmount
+                }
+            }
+        }
+
+        // apply slow debuff when tornado ends
+        for tornado in magicViewModel.tornados where !tornado.isActive {
+            for i in slimes.indices {
+                guard slimes[i].isAlive else { continue }
+                if tornado.containsPoint(slimes[i].position) {
+                    slimes[i].slowTimer = Slime.slowDuration
+                }
+            }
+        }
+    }
+
+    // MARK: - Environment (Day/Night + Weather)
+
+    private var isGameplayPaused: Bool {
+        isInventoryOpen || isFishing || isDead || screenFadeOpacity > 0 || isMapOpen || showingFishingResults
+    }
+
+    private func updateEnvironment(deltaTime: CGFloat) {
+        guard !isGameplayPaused else { return }
+        updateDayNight(deltaTime: deltaTime)
+        updateWeather(deltaTime: deltaTime)
+    }
+
+    private func updateDayNight(deltaTime: CGFloat) {
+        environmentState.timeOfDay += deltaTime / EnvironmentState.cycleDuration
+        if environmentState.timeOfDay >= 1.0 {
+            environmentState.timeOfDay = environmentState.timeOfDay.truncatingRemainder(dividingBy: 1.0)
+        }
+    }
+
+    private func updateWeather(deltaTime: CGFloat) {
+        // handle transition in progress
+        if environmentState.weatherTransitionProgress < 1.0 {
+            environmentState.weatherTransitionProgress += deltaTime / EnvironmentState.transitionDuration
+            if environmentState.weatherTransitionProgress >= 1.0 {
+                environmentState.weatherTransitionProgress = 1.0
+                environmentState.currentWeather = environmentState.targetWeather
+            }
+            return
+        }
+
+        // advance weather timer
+        environmentState.weatherTimer += deltaTime
+        if environmentState.weatherTimer >= environmentState.nextWeatherChangeTime {
+            pickNextWeatherTarget()
+        }
+    }
+
+    private func pickNextWeatherTarget() {
+        let adjacentTypes = environmentState.currentWeather.adjacentTypes
+        guard !adjacentTypes.isEmpty else { return }
+
+        let newTarget = adjacentTypes.randomElement()!
+        environmentState.targetWeather = newTarget
+        environmentState.weatherTransitionProgress = 0
+        environmentState.weatherTimer = 0
+        environmentState.nextWeatherChangeTime = CGFloat.random(
+            in: EnvironmentState.minWeatherDuration...EnvironmentState.maxWeatherDuration
+        )
+    }
+
+    func getDayNightTint() -> (color: Color, brightness: CGFloat) {
+        let time = environmentState.timeOfDay
+
+        // define phase colors and brightness
+        // dawn (0.0-0.25): warm orange, 80%
+        // day (0.25-0.5): white, 100%
+        // dusk (0.5-0.75): orange/pink, 70%
+        // night (0.75-1.0): blue, 50%
+
+        let dawnColor = Color(red: 1.0, green: 0.85, blue: 0.7)
+        let dayColor = Color.white
+        let duskColor = Color(red: 1.0, green: 0.7, blue: 0.55)
+        let nightColor = Color(red: 0.55, green: 0.6, blue: 0.8)
+
+        let dawnBrightness: CGFloat = 0.8
+        let dayBrightness: CGFloat = 1.0
+        let duskBrightness: CGFloat = 0.7
+        let nightBrightness: CGFloat = 0.5
+
+        // calculate position within current phase and interpolate
+        switch time {
+        case 0..<0.25: // dawn
+            let progress = time / 0.25
+            let color = interpolateColor(from: nightColor, to: dawnColor, progress: progress)
+            let brightness = nightBrightness + (dawnBrightness - nightBrightness) * progress
+            return (color, brightness)
+        case 0.25..<0.5: // day (dawn -> day)
+            let progress = (time - 0.25) / 0.25
+            let color = interpolateColor(from: dawnColor, to: dayColor, progress: progress)
+            let brightness = dawnBrightness + (dayBrightness - dawnBrightness) * progress
+            return (color, brightness)
+        case 0.5..<0.75: // dusk (day -> dusk)
+            let progress = (time - 0.5) / 0.25
+            let color = interpolateColor(from: dayColor, to: duskColor, progress: progress)
+            let brightness = dayBrightness + (duskBrightness - dayBrightness) * progress
+            return (color, brightness)
+        default: // night (dusk -> night)
+            let progress = (time - 0.75) / 0.25
+            let color = interpolateColor(from: duskColor, to: nightColor, progress: progress)
+            let brightness = duskBrightness + (nightBrightness - duskBrightness) * progress
+            return (color, brightness)
+        }
+    }
+
+    private func interpolateColor(from: Color, to: Color, progress: CGFloat) -> Color {
+        // simple linear interpolation - SwiftUI colors
+        // we'll blend using overlay approach in the view instead
+        // return the dominant color based on progress
+        if progress < 0.5 {
+            return from
+        } else {
+            return to
+        }
+    }
+
+    private func damageSlime(index: Int, damage: Int) {
+        slimes[index].health -= damage
+        slimes[index].hitFlashTimer = Slime.hitFlashDuration
+        if slimes[index].health <= 0 {
+            slimes[index].isAlive = false
+            deathEffects.append(SlimeDeathEffect(position: slimes[index].position))
+        }
+    }
+
+    // MARK: - Spell Casting
+
+    func castFireball() {
+        // check if cast would fail due to insufficient MP
+        if player.mp < CGFloat(SpellType.fireball.mpCost) && !magicViewModel.isOnCooldown(.fireball) {
+            flashMpBar()
+            return
+        }
+
+        guard magicViewModel.canCast(.fireball, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        // toggle fireball equipped state
+        magicViewModel.toggleFireballEquipped()
+    }
+
+    func castDash() {
+        // check if cast would fail due to insufficient MP
+        if player.mp < CGFloat(SpellType.dash.mpCost) && !magicViewModel.isOnCooldown(.dash) {
+            flashMpBar()
+            return
+        }
+
+        guard magicViewModel.canCast(.dash, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        executeDash()
+    }
+
+    func shootFireballAt(screenOffset: CGPoint) {
+        guard magicViewModel.isFireballEquipped else { return }
+        guard magicViewModel.canCast(.fireball, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else {
+            magicViewModel.unequipFireball()
+            return
+        }
+
+        // calculate direction from player to tap position
+        let length = sqrt(screenOffset.x * screenOffset.x + screenOffset.y * screenOffset.y)
+        guard length > 10 else { return }
+
+        let direction = CGPoint(x: screenOffset.x / length, y: screenOffset.y / length)
+        executeFireball(direction: direction)
+    }
+
+    func castSpell(slotIndex: Int) {
+        guard let spell = magicState.equippedSpells[safe: slotIndex] ?? nil else { return }
+
+        // check if cast would fail due to insufficient MP
+        if player.mp < CGFloat(spell.mpCost) && !magicViewModel.isOnCooldown(spell) {
+            flashMpBar()
+            return
+        }
+
+        guard magicViewModel.canCast(spell, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        switch spell {
+        case .dash:
+            executeDash()
+        case .fireball:
+            magicViewModel.toggleFireballEquipped()
+        case .tornado:
+            // tornado requires tap-to-place, immediate tap places at player position
+            executeTornado(at: player.position)
+        }
+    }
+
+    private func flashMpBar() {
+        mpBarFlashing = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.mpBarFlashing = false
+        }
+    }
+
+    func startSpellAim(slotIndex: Int) {
+        guard let spell = magicState.equippedSpells[safe: slotIndex] ?? nil else { return }
+
+        // check if cast would fail due to insufficient MP
+        if player.mp < CGFloat(spell.mpCost) && !magicViewModel.isOnCooldown(spell) {
+            flashMpBar()
+            return
+        }
+
+        guard magicViewModel.canCast(spell, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        switch spell {
+        case .fireball:
+            magicViewModel.startFireballAim()
+        case .tornado:
+            magicViewModel.startTornadoPlacement()
+        case .dash:
+            break
+        }
+    }
+
+    func updateSpellAim(offset: CGPoint) {
+        if magicViewModel.isAimingFireball {
+            // normalize direction
+            let length = sqrt(offset.x * offset.x + offset.y * offset.y)
+            if length > 10 {
+                let direction = CGPoint(x: offset.x / length, y: offset.y / length)
+                magicViewModel.updateFireballAim(direction: direction)
+            }
+        } else if magicViewModel.isPlacingTornado {
+            // offset from player position
+            let targetPos = CGPoint(
+                x: player.position.x + offset.x,
+                y: player.position.y + offset.y
+            )
+            magicViewModel.updateTornadoTarget(position: targetPos)
+        }
+    }
+
+    func endSpellAim() {
+        if magicViewModel.isAimingFireball {
+            if let direction = magicViewModel.fireballAimDirection {
+                executeFireball(direction: direction)
+            }
+            magicViewModel.cancelFireballAim()
+        } else if magicViewModel.isPlacingTornado {
+            if let targetPos = magicViewModel.tornadoTargetPosition {
+                executeTornado(at: targetPos)
+            } else {
+                // no drag, place at player
+                executeTornado(at: player.position)
+            }
+            magicViewModel.cancelTornadoPlacement()
+        }
+    }
+
+    private func executeDash() {
+        guard magicViewModel.canCast(.dash, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        player.mp -= CGFloat(SpellType.dash.mpCost)
+        timeSinceLastCast = 0
+        magicViewModel.startDashCooldown()
+
+        // calculate dash target (3 tiles = 72pt)
+        let dashDistance: CGFloat = 72
+        let direction = facingToVector(player.facingDirection)
+        let dx = direction.x * dashDistance
+        let dy = direction.y * dashDistance
+        var targetPos = CGPoint(x: player.position.x + dx, y: player.position.y + dy)
+
+        // clamp to valid position (check path)
+        targetPos = findValidDashTarget(from: player.position, toward: targetPos)
+
+        // start dash animation
+        player.isDashing = true
+        dashStartPosition = player.position
+        dashTargetPosition = targetPos
+    }
+
+    private func updateDash(deltaTime: CGFloat) {
+        guard player.isDashing, let target = dashTargetPosition else { return }
+
+        let dx = target.x - player.position.x
+        let dy = target.y - player.position.y
+        let distance = sqrt(dx * dx + dy * dy)
+
+        // reached target
+        if distance < 5 {
+            player.position = target
+            player.isDashing = false
+            dashStartPosition = nil
+            dashTargetPosition = nil
+            return
+        }
+
+        // move toward target
+        let moveDistance = dashSpeed * deltaTime
+        if moveDistance >= distance {
+            player.position = target
+            player.isDashing = false
+            dashStartPosition = nil
+            dashTargetPosition = nil
+        } else {
+            let ratio = moveDistance / distance
+            player.position.x += dx * ratio
+            player.position.y += dy * ratio
+        }
+    }
+
+    private func findValidDashTarget(from start: CGPoint, toward end: CGPoint) -> CGPoint {
+        // check multiple points along path
+        let steps = 10
+        var lastValid = start
+
+        // player hitbox dimensions (same as canMoveTo)
+        let halfWidth: CGFloat = 12
+        let halfHeight: CGFloat = 16
+        let treeOverlap: CGFloat = 20
+
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let checkPos = CGPoint(
+                x: start.x + (end.x - start.x) * t,
+                y: start.y + (end.y - start.y) * t
+            )
+
+            // check all tiles the player hitbox overlaps (same as canMoveTo)
+            let leftTile = Int(floor((checkPos.x - halfWidth) / tileSize))
+            let rightTile = Int(floor((checkPos.x + halfWidth - 0.01) / tileSize))
+            let topTile = Int(floor((checkPos.y - halfHeight) / tileSize))
+            let bottomTile = Int(floor((checkPos.y + halfHeight - 0.01) / tileSize))
+
+            var hitsTile = false
+            for tileY in topTile...bottomTile {
+                for tileX in leftTile...rightTile {
+                    let tile = world.tile(at: tileX, y: tileY)
+                    if !tile.isWalkable && !tile.isSwimmable {
+                        // check tree trunk depth overlap
+                        if let treeTrunk = treeTrunkAt(tileX: tileX, tileY: tileY) {
+                            let trunkBottomY = CGFloat(treeTrunk.y + treeTrunk.size) * tileSize
+                            if checkPos.y > trunkBottomY - tileSize * 2 {
+                                let trunkBottomTile = treeTrunk.y + treeTrunk.size - 1
+                                if tileY == trunkBottomTile {
+                                    let reducedTopTile = Int(floor((checkPos.y - halfHeight + treeOverlap) / tileSize))
+                                    if tileY < reducedTopTile {
+                                        continue
+                                    }
+                                }
+                            }
+                        }
+                        hitsTile = true
+                        break
+                    }
+                }
+                if hitsTile { break }
+            }
+            if hitsTile { break }
+
+            // check rock collision bounds with depth adjustment
+            let playerRect = CGRect(
+                x: checkPos.x - halfWidth,
+                y: checkPos.y - halfHeight,
+                width: halfWidth * 2,
+                height: halfHeight * 2
+            )
+            var hitsRock = false
+            for rock in world.rockOverlays {
+                if playerRect.intersects(rock.depthCollisionRect(tileSize: tileSize, playerY: checkPos.y)) {
+                    hitsRock = true
+                    break
+                }
+            }
+            if hitsRock { break }
+
+            lastValid = checkPos
+        }
+
+        return lastValid
+    }
+
+    private func executeFireball(direction: CGPoint) {
+        guard magicViewModel.canCast(.fireball, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        player.mp -= CGFloat(SpellType.fireball.mpCost)
+        timeSinceLastCast = 0
+
+        let damage = SpellType.fireball.baseDamage + (magicState.spellTiers[SpellType.fireball.rawValue] ?? 0)
+        magicViewModel.createFireball(at: player.position, direction: direction, damage: damage)
+    }
+
+    private func executeTornado(at position: CGPoint) {
+        guard magicViewModel.canCast(.tornado, mp: player.mp, isSwimming: player.isSwimming, isSailing: player.isSailing) else { return }
+
+        player.mp -= CGFloat(SpellType.tornado.mpCost)
+        timeSinceLastCast = 0
+        magicViewModel.createTornado(at: position)
+    }
+
     func respawn() {
         // if died in water, respawn at last land position; otherwise at death position
         let respawnPosition = respawnLandPosition ?? deathPosition ?? player.position
@@ -254,6 +783,14 @@ class GameViewModel: ObservableObject {
         player.swimStartPoint = nil
         player.health = effectiveMaxHealth
         player.stamina = player.maxStamina
+        player.mp = effectiveMaxMp
+
+        // reset cooldowns on respawn
+        magicViewModel.cooldowns = [:]
+        timeSinceLastCast = 0
+
+        // reset combat states
+        resetCombatStates()
 
         lastHealth = player.health
         saveCurrentProfile()
@@ -285,24 +822,178 @@ class GameViewModel: ObservableObject {
         onReturnToMainMenu?()
     }
 
+    // MARK: - Block/Parry System
+
+    var canBlock: Bool {
+        !player.isSwimming &&
+        !player.isSailing &&
+        !player.isAttacking &&
+        !player.isCharging &&
+        player.blockCooldownTimer <= 0
+    }
+
+    func startBlock() {
+        guard canBlock else { return }
+        player.isBlocking = true
+        player.blockStartTime = CACurrentMediaTime()
+    }
+
+    func endBlock() {
+        guard player.isBlocking else { return }
+        player.isBlocking = false
+        player.blockCooldownTimer = Player.blockCooldown
+    }
+
+    private func updateBlock(deltaTime: CGFloat) {
+        // decrement cooldown
+        if player.blockCooldownTimer > 0 {
+            player.blockCooldownTimer = max(0, player.blockCooldownTimer - deltaTime)
+        }
+
+        guard player.isBlocking else { return }
+
+        // auto-end after max duration
+        let elapsed = CGFloat(CACurrentMediaTime() - player.blockStartTime)
+        if elapsed >= Player.blockDuration {
+            endBlock()
+        }
+    }
+
+    private func isInParryWindow() -> Bool {
+        guard player.isBlocking else { return false }
+        let elapsed = CGFloat(CACurrentMediaTime() - player.blockStartTime)
+        return elapsed <= Player.parryWindow
+    }
+
+    private func triggerParry(slimeIndex: Int) {
+        // stun the enemy
+        slimes[slimeIndex].isStunned = true
+        slimes[slimeIndex].stunEndTime = Slime.parryStunDuration
+
+        // knockback enemy away from player
+        let dir = CGPoint(
+            x: slimes[slimeIndex].position.x - player.position.x,
+            y: slimes[slimeIndex].position.y - player.position.y
+        )
+        applyKnockback(
+            position: &slimes[slimeIndex].position,
+            direction: dir,
+            distance: Slime.parryKnockback,
+            halfWidth: Slime.halfSize,
+            halfHeight: Slime.halfSize
+        )
+
+        // create parry flash effect at player position
+        parryFlashEffects.append(ParryFlashEffect(position: player.position))
+    }
+
+    private func updateParryEffects(deltaTime: CGFloat) {
+        for i in (0..<parryFlashEffects.count).reversed() {
+            parryFlashEffects[i].elapsed += deltaTime
+            if parryFlashEffects[i].elapsed >= ParryFlashEffect.duration {
+                parryFlashEffects.remove(at: i)
+            }
+        }
+    }
+
+    // MARK: - Charged Attack System
+
+    var canCharge: Bool {
+        !player.isSwimming &&
+        !player.isSailing &&
+        !player.isBlocking &&
+        !player.isAttacking &&
+        player.equippedTool == .sword
+    }
+
+    func startCharge() {
+        guard canCharge else { return }
+        player.isCharging = true
+        player.chargeStartTime = CACurrentMediaTime()
+        player.chargeProgress = 0
+    }
+
+    func releaseCharge() {
+        guard player.isCharging else { return }
+
+        // calculate damage multiplier based on charge progress
+        // 0% = 1x, 100% = 2x
+        let damageMultiplier = 1.0 + player.chargeProgress * (Player.maxChargeDamageMultiplier - 1.0)
+
+        // charged attacks (any charge > 0) are AoE
+        let isCharged = player.chargeProgress > 0.1
+
+        player.isCharging = false
+        player.chargeProgress = 0
+
+        // perform sword swing with damage multiplier and AoE flag
+        startSwordSwing(damageMultiplier: Int(ceil(damageMultiplier)), isCharged: isCharged)
+    }
+
+    private func cancelCharge() {
+        player.isCharging = false
+        player.chargeProgress = 0
+    }
+
+    private func updateCharge(deltaTime: CGFloat) {
+        guard player.isCharging else { return }
+
+        // cancel if now invalid state
+        if player.isSwimming || player.isSailing || player.isBlocking {
+            cancelCharge()
+            return
+        }
+
+        let elapsed = CGFloat(CACurrentMediaTime() - player.chargeStartTime)
+        player.chargeProgress = min(1.0, elapsed / Player.chargeTime)
+    }
+
+    private func resetCombatStates() {
+        player.isBlocking = false
+        player.blockCooldownTimer = 0
+        cancelCharge()
+    }
+
     private func updatePlayerPosition() {
         let deltaTime: CGFloat = 1.0 / 60.0
         let maxRadius = (120.0 - 50.0) / 2
         let distance = hypot(joystickOffset.width, joystickOffset.height)
         let isMoving = distance > 0
 
-        player.isWalking = isMoving && !player.isSailing
+        player.isWalking = isMoving && !player.isSailing && !player.isBlocking
 
         updateAttackAnimation(deltaTime: deltaTime)
         updateStamina(deltaTime: deltaTime, isMoving: isMoving)
+        updateMpRegen(deltaTime: deltaTime)
+        updateMagic(deltaTime: deltaTime)
+        updateBlock(deltaTime: deltaTime)
+        updateCharge(deltaTime: deltaTime)
         updateSlimes(deltaTime: deltaTime)
         checkSlimeContactDamage()
         checkSwordHits()
         updateDeathEffects(deltaTime: deltaTime)
+        updateParryEffects(deltaTime: deltaTime)
+        updateEnvironment(deltaTime: deltaTime)
 
         // handle sailing movement
         if player.isSailing {
             updateSailingPosition(deltaTime: deltaTime, distance: distance, maxRadius: maxRadius)
+            return
+        }
+
+        // skip normal movement during dash (dash handles its own movement)
+        if player.isDashing { return }
+
+        // no movement while blocking
+        if player.isBlocking {
+            // still allow changing facing direction
+            if isMoving {
+                player.lookDirection = CGPoint(
+                    x: joystickOffset.width / distance,
+                    y: joystickOffset.height / distance
+                )
+                player.facingDirection = FacingDirection.from(direction: player.lookDirection)
+            }
             return
         }
 
@@ -312,11 +1003,15 @@ class GameViewModel: ObservableObject {
         let normalizedX = (joystickOffset.width / distance) * (clampedDistance / maxRadius)
         let normalizedY = (joystickOffset.height / distance) * (clampedDistance / maxRadius)
 
-        let speedMultiplier: CGFloat
+        var speedMultiplier: CGFloat
         if player.isSwimming {
             speedMultiplier = player.isSprinting ? 0.8 : player.swimSpeedMultiplier
         } else {
             speedMultiplier = player.isSprinting ? player.sprintSpeedMultiplier : 1.0
+        }
+        // apply charging movement penalty
+        if player.isCharging {
+            speedMultiplier *= Player.chargingMoveSpeedMultiplier
         }
         let currentSpeed = movementSpeed * speedMultiplier
         let deltaX = normalizedX * currentSpeed * deltaTime
@@ -352,8 +1047,9 @@ class GameViewModel: ObservableObject {
     }
 
     private func updateSailingPosition(deltaTime: CGFloat, distance: CGFloat, maxRadius: CGFloat) {
-        // update wind
-        sailingState.updateWind(deltaTime: deltaTime)
+        // update wind (weather affects drift rate)
+        let weatherDriftMult = environmentState.effectiveWindDriftMultiplier
+        sailingState.updateWind(deltaTime: deltaTime, driftMultiplier: weatherDriftMult)
 
         // calculate joystick velocity
         var deltaX: CGFloat = 0
@@ -377,10 +1073,11 @@ class GameViewModel: ObservableObject {
             player.facingDirection = FacingDirection.from(direction: player.lookDirection)
         }
 
-        // add wind push
+        // add wind push (weather affects wind strength)
+        let weatherWindMult = environmentState.effectiveWindMultiplier
         let windPush = sailingState.windDirection
-        deltaX += windPush.x * sailingState.windStrength * deltaTime
-        deltaY += windPush.y * sailingState.windStrength * deltaTime
+        deltaX += windPush.x * sailingState.windStrength * weatherWindMult * deltaTime
+        deltaY += windPush.y * sailingState.windStrength * weatherWindMult * deltaTime
 
         let newPosition = CGPoint(
             x: player.position.x + deltaX,
@@ -429,6 +1126,7 @@ class GameViewModel: ObservableObject {
         // player hitbox: 24 wide x 32 tall (4 pixel margin on each side horizontally)
         let halfWidth: CGFloat = 12
         let halfHeight: CGFloat = 16
+        let treeOverlap: CGFloat = 20  // how much head can overlap into tree trunk
 
         // get tile range that the player hitbox overlaps
         let leftTile = Int(floor((position.x - halfWidth) / tileSize))
@@ -441,12 +1139,28 @@ class GameViewModel: ObservableObject {
             for tileX in leftTile...rightTile {
                 let tile = world.tile(at: tileX, y: tileY)
                 if !tile.isWalkable && !tile.isSwimmable {
+                    // check if this is a tree trunk tile (allow depth overlap)
+                    if let treeTrunk = treeTrunkAt(tileX: tileX, tileY: tileY) {
+                        let trunkBottomY = CGFloat(treeTrunk.y + treeTrunk.size) * tileSize
+                        // allow overlap when player is below tree (head goes into trunk)
+                        if position.y > trunkBottomY - tileSize * 2 {
+                            // check if this tile is in the overlap zone (bottom portion of trunk)
+                            let trunkBottomTile = treeTrunk.y + treeTrunk.size - 1
+                            if tileY == trunkBottomTile {
+                                // tile is in overlap zone if it's above the reduced top
+                                let reducedTopTile = Int(floor((position.y - halfHeight + treeOverlap) / tileSize))
+                                if tileY < reducedTopTile {
+                                    continue  // allow this overlap
+                                }
+                            }
+                        }
+                    }
                     return false
                 }
             }
         }
 
-        // check rock collision bounds
+        // check rock collision bounds with depth adjustment
         let playerRect = CGRect(
             x: position.x - halfWidth,
             y: position.y - halfHeight,
@@ -454,13 +1168,28 @@ class GameViewModel: ObservableObject {
             height: halfHeight * 2
         )
         for rock in world.rockOverlays {
-            let rockRect = rock.collisionRect(tileSize: tileSize)
+            let rockRect = rock.depthCollisionRect(tileSize: tileSize, playerY: position.y)
             if playerRect.intersects(rockRect) {
                 return false
             }
         }
 
         return true
+    }
+
+    private func treeTrunkAt(tileX: Int, tileY: Int) -> GroundSprite? {
+        for sprite in world.groundSprites {
+            let spriteLeft = sprite.x
+            let spriteRight = sprite.x + sprite.size - 1
+            let spriteTop = sprite.y
+            let spriteBottom = sprite.y + sprite.size - 1
+
+            if tileX >= spriteLeft && tileX <= spriteRight &&
+               tileY >= spriteTop && tileY <= spriteBottom {
+                return sprite
+            }
+        }
+        return nil
     }
 
     private func isInWater(_ position: CGPoint) -> Bool {
@@ -476,6 +1205,8 @@ class GameViewModel: ObservableObject {
         if nowInWater && !wasSwimming {
             player.isSwimming = true
             player.swimStartPoint = previousPosition
+            // cancel block/charge when entering water
+            resetCombatStates()
         } else if !nowInWater && wasSwimming {
             player.isSwimming = false
             player.swimStartPoint = nil
@@ -508,9 +1239,6 @@ class GameViewModel: ObservableObject {
         if inventoryViewModel.inventory.tools.axeTier > 0 {
             tools.append(.axe)
         }
-        if inventoryViewModel.inventory.tools.hasWand {
-            tools.append(.wand)
-        }
         return tools
     }
 
@@ -523,11 +1251,9 @@ class GameViewModel: ObservableObject {
         case .fishingRod:
             return isFacingWater() && !player.isSwimming
         case .sword:
-            return inventoryViewModel.inventory.tools.swordTier > 0
+            return inventoryViewModel.inventory.tools.swordTier > 0 && !player.isSwimming
         case .axe:
-            return isFacingTree() || isFacingRock()
-        case .wand:
-            return false // not yet implemented
+            return isFacingTree() && !player.isSwimming
         }
     }
 
@@ -540,31 +1266,34 @@ class GameViewModel: ObservableObject {
             startSwordSwing()
         case .axe:
             useAxe()
-        case .wand:
-            break // not yet implemented
         }
     }
 
     // MARK: - Axe
 
     func useAxe() {
-        if isFacingTree() {
-            _ = inventoryViewModel.addItem(.resource(type: .wood, quantity: 1))
-            saveCurrentProfile()
-        } else if isFacingRock() {
-            _ = inventoryViewModel.addItem(.resource(type: .stone, quantity: 1))
-            saveCurrentProfile()
-        }
-    }
-
-    // MARK: - Sword
-
-    func startSwordSwing() {
-        guard !player.isAttacking else { return }
+        guard !player.isAttacking, !player.isSwimming, isFacingTree() else { return }
         player.isAttacking = true
         player.attackAnimationFrame = 1
         player.attackAnimationTime = 0
         player.attackSwingId += 1
+        player.currentSwingDamage = 1
+        player.isChargedAttack = false
+
+        _ = inventoryViewModel.addItem(.resource(type: .wood, quantity: 1))
+        saveCurrentProfile()
+    }
+
+    // MARK: - Sword
+
+    func startSwordSwing(damageMultiplier: Int = 1, isCharged: Bool = false) {
+        guard !player.isAttacking, !player.isSwimming else { return }
+        player.isAttacking = true
+        player.attackAnimationFrame = 1
+        player.attackAnimationTime = 0
+        player.attackSwingId += 1
+        player.currentSwingDamage = damageMultiplier
+        player.isChargedAttack = isCharged
     }
 
     private func updateAttackAnimation(deltaTime: CGFloat) {
@@ -594,6 +1323,15 @@ class GameViewModel: ObservableObject {
         case .down: return (0, 1)
         case .left: return (-1, 0)
         case .right: return (1, 0)
+        }
+    }
+
+    private func facingToVector(_ facing: FacingDirection) -> CGPoint {
+        switch facing {
+        case .up: return CGPoint(x: 0, y: -1)
+        case .down: return CGPoint(x: 0, y: 1)
+        case .left: return CGPoint(x: -1, y: 0)
+        case .right: return CGPoint(x: 1, y: 0)
         }
     }
 
@@ -822,6 +1560,25 @@ class GameViewModel: ObservableObject {
                 slimes[i].hitFlashTimer = max(0, slimes[i].hitFlashTimer - deltaTime)
             }
 
+            // decrement slow timer
+            if slimes[i].slowTimer > 0 {
+                slimes[i].slowTimer = max(0, slimes[i].slowTimer - deltaTime)
+            }
+
+            // decrement stun timer
+            if slimes[i].isStunned {
+                slimes[i].stunEndTime = max(0, slimes[i].stunEndTime - deltaTime)
+                if slimes[i].stunEndTime <= 0 {
+                    slimes[i].isStunned = false
+                }
+                continue // stunned slimes don't move or change AI state
+            }
+
+            // decrement attack cooldown
+            if slimes[i].attackCooldown > 0 {
+                slimes[i].attackCooldown = max(0, slimes[i].attackCooldown - deltaTime)
+            }
+
             let distToPlayer = hypot(
                 player.position.x - slimes[i].position.x,
                 player.position.y - slimes[i].position.y
@@ -881,8 +1638,10 @@ class GameViewModel: ObservableObject {
         let dist = hypot(dx, dy)
         guard dist > 1 else { return }
 
-        let moveX = (dx / dist) * speed * deltaTime
-        let moveY = (dy / dist) * speed * deltaTime
+        // apply slow multiplier if slowed by tornado
+        let effectiveSpeed = slimes[index].isSlowed ? speed * Slime.slowMultiplier : speed
+        let moveX = (dx / dist) * effectiveSpeed * deltaTime
+        let moveY = (dy / dist) * effectiveSpeed * deltaTime
 
         let newPos = CGPoint(x: slimes[index].position.x + moveX, y: slimes[index].position.y + moveY)
         if slimeCanMoveTo(newPos) {
@@ -948,12 +1707,35 @@ class GameViewModel: ObservableObject {
 
         for i in 0..<slimes.count {
             guard slimes[i].isAlive else { continue }
+            guard slimes[i].canAct else { continue } // stunned slimes can't deal damage
+            guard slimes[i].attackCooldown <= 0 else { continue } // slime on cooldown
             guard playerRect.intersects(slimes[i].collisionRect) else { continue }
 
-            // deal half-heart damage
+            // check for blocking
+            if player.isBlocking {
+                // check for parry (first 150ms of block)
+                if isInParryWindow() {
+                    triggerParry(slimeIndex: i)
+                }
+                // block negates damage but player still gets pushed back
+                let dir = CGPoint(
+                    x: player.position.x - slimes[i].position.x,
+                    y: player.position.y - slimes[i].position.y
+                )
+                applyKnockback(position: &player.position, direction: dir, distance: Slime.knockbackDistance, halfWidth: 12, halfHeight: 16)
+                return // processed this contact
+            }
+
+            // not blocking - take damage
             player.health = max(0, player.health - Slime.contactDamage)
             player.invincibilityTimer = Player.invincibilityDuration
+            slimes[i].attackCooldown = Slime.attackCooldownDuration
             lastHealth = player.health
+
+            // cancel charge if taking damage
+            if player.isCharging {
+                cancelCharge()
+            }
 
             // knockback player away from slime
             let dir = CGPoint(
@@ -975,21 +1757,45 @@ class GameViewModel: ObservableObject {
 
     private func checkSwordHits() {
         guard player.isAttacking else { return }
-        guard let hitbox = swordHitbox() else { return }
+
+        // charged attacks use circular AoE, normal attacks use directional hitbox
+        let chargedAoeRadius: CGFloat = 40
 
         for i in 0..<slimes.count {
             guard slimes[i].isAlive else { continue }
             guard slimes[i].hitCooldown != player.attackSwingId else { continue }
-            guard hitbox.intersects(slimes[i].collisionRect) else { continue }
 
-            // deal damage
-            slimes[i].health -= 1
+            var isHit = false
+            if player.isChargedAttack {
+                // circular AoE for charged attacks
+                let dx = slimes[i].position.x - player.position.x
+                let dy = slimes[i].position.y - player.position.y
+                let distance = sqrt(dx * dx + dy * dy)
+                isHit = distance <= chargedAoeRadius + Slime.halfSize
+            } else {
+                // directional hitbox for normal attacks
+                guard let hitbox = swordHitbox() else { continue }
+                isHit = hitbox.intersects(slimes[i].collisionRect)
+            }
+
+            guard isHit else { continue }
+
+            // deal damage (uses currentSwingDamage which may be modified by charge)
+            slimes[i].health -= player.currentSwingDamage
             slimes[i].hitCooldown = player.attackSwingId
             slimes[i].hitFlashTimer = Slime.hitFlashDuration
 
-            // knockback slime in facing direction
-            let (dx, dy) = facingOffset()
-            let dir = CGPoint(x: CGFloat(dx), y: CGFloat(dy))
+            // knockback direction: charged = away from player, normal = facing direction
+            let dir: CGPoint
+            if player.isChargedAttack {
+                dir = CGPoint(
+                    x: slimes[i].position.x - player.position.x,
+                    y: slimes[i].position.y - player.position.y
+                )
+            } else {
+                let (dx, dy) = facingOffset()
+                dir = CGPoint(x: CGFloat(dx), y: CGFloat(dy))
+            }
             applyKnockback(position: &slimes[i].position, direction: dir, distance: Slime.knockbackDistance, halfWidth: Slime.halfSize, halfHeight: Slime.halfSize)
 
             // check slime death
@@ -1041,18 +1847,43 @@ class GameViewModel: ObservableObject {
         let rightTile = Int(floor((position.x + halfWidth - 0.01) / tileSize))
         let topTile = Int(floor((position.y - halfHeight) / tileSize))
         let bottomTile = Int(floor((position.y + halfHeight - 0.01) / tileSize))
+        let treeOverlap: CGFloat = 20
 
         for tileY in topTile...bottomTile {
             for tileX in leftTile...rightTile {
                 let tile = world.tile(at: tileX, y: tileY)
-                if !tile.isWalkable && !tile.isSwimmable { return false }
+                if !tile.isWalkable && !tile.isSwimmable {
+                    // check tree trunk depth overlap for player-sized entities
+                    if halfWidth == 12 && halfHeight == 16 {
+                        if let treeTrunk = treeTrunkAt(tileX: tileX, tileY: tileY) {
+                            let trunkBottomY = CGFloat(treeTrunk.y + treeTrunk.size) * tileSize
+                            if position.y > trunkBottomY - tileSize * 2 {
+                                let trunkBottomTile = treeTrunk.y + treeTrunk.size - 1
+                                if tileY == trunkBottomTile {
+                                    let reducedTopTile = Int(floor((position.y - halfHeight + treeOverlap) / tileSize))
+                                    if tileY < reducedTopTile {
+                                        continue
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return false
+                }
             }
         }
 
         let entityRect = CGRect(x: position.x - halfWidth, y: position.y - halfHeight, width: halfWidth * 2, height: halfHeight * 2)
         for rock in world.rockOverlays {
-            if entityRect.intersects(rock.collisionRect(tileSize: tileSize)) {
-                return false
+            // use depth-adjusted collision for player-sized entities
+            if halfWidth == 12 && halfHeight == 16 {
+                if entityRect.intersects(rock.depthCollisionRect(tileSize: tileSize, playerY: position.y)) {
+                    return false
+                }
+            } else {
+                if entityRect.intersects(rock.collisionRect(tileSize: tileSize)) {
+                    return false
+                }
             }
         }
         return true
@@ -1100,6 +1931,9 @@ class GameViewModel: ObservableObject {
 
         // close map immediately
         closeMap()
+
+        // reset combat states before teleport
+        resetCombatStates()
 
         // fade to black
         withAnimation(.easeIn(duration: 0.3)) {

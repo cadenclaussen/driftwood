@@ -46,13 +46,6 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
-                // ground sprites (always behind player, like tiles)
-                groundSpritesLayer(
-                    cameraX: cameraX,
-                    cameraY: cameraY,
-                    screenWidth: screenWidth,
-                    screenHeight: screenHeight
-                )
                 // teleport pad overlays (flat on grass)
                 teleportPadsLayer(
                     cameraX: cameraX,
@@ -60,8 +53,17 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
-                // rock overlays (ground level, behind player)
+                // rock overlays behind player (player is below rock)
                 rockOverlaysLayer(
+                    behind: true,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // tree trunks behind player
+                groundSpritesDepthLayer(
+                    behind: true,
                     cameraX: cameraX,
                     cameraY: cameraY,
                     screenWidth: screenWidth,
@@ -100,13 +102,27 @@ struct GameView: View {
                             y: screenHeight / 2
                         )
                 } else {
-                    PlayerView(
-                        size: viewModel.player.size,
-                        facingDirection: viewModel.player.facingDirection,
-                        isWalking: viewModel.player.isWalking,
-                        isAttacking: viewModel.player.isAttacking,
-                        attackFrame: viewModel.player.attackAnimationFrame
-                    )
+                    ZStack {
+                        PlayerView(
+                            size: viewModel.player.size,
+                            facingDirection: viewModel.player.facingDirection,
+                            isWalking: viewModel.player.isWalking,
+                            isAttacking: viewModel.player.isAttacking,
+                            attackFrame: viewModel.player.attackAnimationFrame,
+                            equippedTool: viewModel.player.equippedTool
+                        )
+                        // block tint overlay
+                        if viewModel.player.isBlocking {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.3))
+                                .frame(width: viewModel.player.size, height: viewModel.player.size)
+                                .blendMode(.plusLighter)
+                        }
+                        // charge indicator
+                        if viewModel.player.isCharging {
+                            ChargeIndicatorView(chargeProgress: viewModel.player.chargeProgress)
+                        }
+                    }
                     .position(
                         x: screenWidth / 2,
                         y: screenHeight / 2
@@ -121,8 +137,39 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
+                // rock overlays in front of player (player is above rock)
+                rockOverlaysLayer(
+                    behind: false,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // tree trunks in front of player
+                groundSpritesDepthLayer(
+                    behind: false,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
                 // death effects
                 deathEffectsLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // spell effects
+                spellEffectsLayer(
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+                // parry flash effects
+                ParryFlashEffectsLayer(
+                    effects: viewModel.parryFlashEffects,
                     cameraX: cameraX,
                     cameraY: cameraY,
                     screenWidth: screenWidth,
@@ -136,12 +183,39 @@ struct GameView: View {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
                 )
-                hudLayer(safeLeft: safeLeft, safeRight: safeRight, safeTop: safeTop)
-                controlsLayer(safeLeft: safeLeft, safeRight: safeRight, safeBottom: safeBottom)
+                // day/night tint overlay (affects game world, not HUD)
+                DayNightOverlayView(timeOfDay: viewModel.environmentState.timeOfDay)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                // rain particles (above game, below HUD)
+                if viewModel.environmentState.effectiveRainIntensity > 0 {
+                    RainParticleView(
+                        intensity: viewModel.environmentState.effectiveRainIntensity,
+                        screenSize: CGSize(width: screenWidth, height: screenHeight)
+                    )
+                    .ignoresSafeArea()
+                }
+                hudLayer(safeLeft: safeLeft, safeRight: safeRight, safeTop: safeTop, screenWidth: screenWidth)
+                controlsLayer(safeLeft: safeLeft, safeRight: safeRight, safeBottom: safeBottom, screenWidth: screenWidth, screenHeight: screenHeight)
                 Color.black
                     .opacity(viewModel.screenFadeOpacity)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
+
+                // fireball tap-to-shoot overlay
+                if viewModel.magicViewModel.isFireballEquipped {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            let screenCenter = CGPoint(x: screenWidth / 2, y: screenHeight / 2)
+                            let offset = CGPoint(
+                                x: location.x - screenCenter.x,
+                                y: location.y - screenCenter.y
+                            )
+                            viewModel.shootFireballAt(screenOffset: offset)
+                        }
+                }
+
 
                 if viewModel.isInventoryOpen {
                     InventoryView(
@@ -212,6 +286,7 @@ struct GameView: View {
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
             }
+            .coordinateSpace(name: "gameScreen")
         }
         .onAppear {
             viewModel.onReturnToMainMenu = onReturnToMainMenu
@@ -267,28 +342,6 @@ struct GameView: View {
         .offset(x: gridOffsetX, y: gridOffsetY)
     }
 
-    private func groundSpritesLayer(
-        cameraX: CGFloat,
-        cameraY: CGFloat,
-        screenWidth: CGFloat,
-        screenHeight: CGFloat
-    ) -> some View {
-        return ZStack {
-            ForEach(viewModel.world.groundSprites) { sprite in
-                let spriteSize = tileSize * CGFloat(sprite.size)
-                let spritePixelX = CGFloat(sprite.x) * tileSize + spriteSize / 2
-                let spritePixelY = CGFloat(sprite.y) * tileSize + spriteSize / 2
-                let screenX = screenWidth / 2 + (spritePixelX - cameraX)
-                let screenY = screenHeight / 2 + (spritePixelY - cameraY)
-
-                Image(sprite.spriteName)
-                    .interpolation(.none)
-                    .resizable()
-                    .frame(width: spriteSize, height: spriteSize)
-                    .position(x: screenX, y: screenY)
-            }
-        }
-    }
 
     private func teleportPadsLayer(
         cameraX: CGFloat,
@@ -313,14 +366,24 @@ struct GameView: View {
     }
 
     private func rockOverlaysLayer(
+        behind: Bool,
         cameraX: CGFloat,
         cameraY: CGFloat,
         screenWidth: CGFloat,
         screenHeight: CGFloat
     ) -> some View {
         let rockSize = tileSize * 2  // rocks are 2x2 tiles
+        let playerBottomY = viewModel.player.position.y + viewModel.player.size / 2
+
+        // filter rocks based on depth relative to player
+        let filteredRocks = viewModel.world.rockOverlays.filter { rock in
+            let rockBottomY = rock.bottomY(tileSize: tileSize)
+            // behind = rock bottom is above player bottom (rock renders behind)
+            return behind ? (rockBottomY < playerBottomY) : (rockBottomY >= playerBottomY)
+        }
+
         return ZStack {
-            ForEach(viewModel.world.rockOverlays) { rock in
+            ForEach(filteredRocks) { rock in
                 // rock is 2x2 tiles, anchored at top-left tile position
                 let rockPixelX = CGFloat(rock.x) * tileSize + rockSize / 2
                 let rockPixelY = CGFloat(rock.y) * tileSize + rockSize / 2
@@ -331,6 +394,39 @@ struct GameView: View {
                     .interpolation(.none)
                     .resizable()
                     .frame(width: rockSize, height: rockSize)
+                    .position(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    private func groundSpritesDepthLayer(
+        behind: Bool,
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        let playerBottomY = viewModel.player.position.y + viewModel.player.size / 2
+
+        // filter ground sprites (tree trunks) based on depth relative to player
+        let filteredSprites = viewModel.world.groundSprites.filter { sprite in
+            let spriteBottomY = CGFloat(sprite.y + sprite.size) * tileSize
+            // behind = sprite bottom is above player bottom (sprite renders behind)
+            return behind ? (spriteBottomY < playerBottomY) : (spriteBottomY >= playerBottomY)
+        }
+
+        return ZStack {
+            ForEach(filteredSprites) { sprite in
+                let spriteSize = tileSize * CGFloat(sprite.size)
+                let spritePixelX = CGFloat(sprite.x) * tileSize + spriteSize / 2
+                let spritePixelY = CGFloat(sprite.y) * tileSize + spriteSize / 2
+                let screenX = screenWidth / 2 + (spritePixelX - cameraX)
+                let screenY = screenHeight / 2 + (spritePixelY - cameraY)
+
+                Image(sprite.spriteName)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: spriteSize, height: spriteSize)
                     .position(x: screenX, y: screenY)
             }
         }
@@ -433,7 +529,49 @@ struct GameView: View {
         }
     }
 
-    private func hudLayer(safeLeft: CGFloat, safeRight: CGFloat, safeTop: CGFloat) -> some View {
+    private func spellEffectsLayer(
+        cameraX: CGFloat,
+        cameraY: CGFloat,
+        screenWidth: CGFloat,
+        screenHeight: CGFloat
+    ) -> some View {
+        ZStack {
+            // fireball projectiles
+            ForEach(viewModel.magicViewModel.projectiles) { projectile in
+                FireballProjectileView(
+                    projectile: projectile,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+            }
+
+            // tornados
+            ForEach(viewModel.magicViewModel.tornados) { tornado in
+                TornadoEffectView(
+                    tornado: tornado,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+            }
+
+            // explosions
+            ForEach(viewModel.magicViewModel.explosions) { explosion in
+                SpellExplosionView(
+                    explosion: explosion,
+                    cameraX: cameraX,
+                    cameraY: cameraY,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight
+                )
+            }
+        }
+    }
+
+    private func hudLayer(safeLeft: CGFloat, safeRight: CGFloat, safeTop: CGFloat, screenWidth: CGFloat) -> some View {
         let buffer: CGFloat = Theme.Spacing.lg
         let showMinimap = !viewModel.isInventoryOpen && !viewModel.isFishing && !viewModel.isDead && !viewModel.isMapOpen
         return VStack {
@@ -448,8 +586,9 @@ struct GameView: View {
                         maxStamina: viewModel.player.maxStamina
                     )
                     MagicBarView(
-                        magic: viewModel.player.magic,
-                        maxMagic: viewModel.player.maxMagic
+                        mp: viewModel.player.mp,
+                        maxMp: viewModel.effectiveMaxMp,
+                        isFlashing: viewModel.mpBarFlashing
                     )
                     // minimap
                     if showMinimap {
@@ -460,6 +599,10 @@ struct GameView: View {
                         )
                         .padding(.top, Theme.Spacing.sm)
                     }
+                    // weather icon below minimap
+                    WeatherIconView(weather: viewModel.environmentState.displayWeather)
+                        .padding(.top, Theme.Spacing.sm)
+                        .padding(.leading, Theme.Spacing.xl)
                 }
                 .padding(.leading, safeLeft + buffer)
                 .padding(.top, safeTop + buffer)
@@ -475,7 +618,7 @@ struct GameView: View {
         }
     }
 
-    private func controlsLayer(safeLeft: CGFloat, safeRight: CGFloat, safeBottom: CGFloat) -> some View {
+    private func controlsLayer(safeLeft: CGFloat, safeRight: CGFloat, safeBottom: CGFloat, screenWidth: CGFloat, screenHeight: CGFloat) -> some View {
         let buffer: CGFloat = Theme.Spacing.lg
         let rightBuffer: CGFloat = Theme.Size.hudRightBuffer
 
@@ -509,25 +652,102 @@ struct GameView: View {
 
                 Spacer()
 
-                // right side controls
-                VStack(spacing: Theme.Spacing.mdl) {
-                    // tool button (turns cyan when can use equipped tool)
-                    if !viewModel.player.isSailing {
-                        ToolButtonView(
-                            equippedTool: viewModel.player.equippedTool,
-                            canUseTool: viewModel.canUseTool,
-                            onTap: { viewModel.useTool() },
-                            onLongPress: { viewModel.openToolMenu() }
-                        )
-                    }
+                // right side controls - 3 columns
+                if !viewModel.player.isSailing {
+                    HStack(spacing: Theme.Spacing.md) {
+                        // left column: spells (fireball, dash)
+                        VStack(spacing: Theme.Spacing.mdl) {
+                            SpellButton(
+                                spell: .fireball,
+                                isEquipped: viewModel.magicViewModel.isFireballEquipped,
+                                cooldownProgress: viewModel.magicViewModel.cooldownProgress(for: .fireball),
+                                canAfford: viewModel.player.mp >= CGFloat(SpellType.fireball.mpCost),
+                                isDisabled: viewModel.player.isSwimming,
+                                onTap: { viewModel.castFireball() }
+                            )
+                            SpellButton(
+                                spell: .dash,
+                                isEquipped: false,
+                                cooldownProgress: viewModel.magicViewModel.cooldownProgress(for: .dash),
+                                canAfford: viewModel.player.mp >= CGFloat(SpellType.dash.mpCost),
+                                isDisabled: false,
+                                onTap: { viewModel.castDash() }
+                            )
+                        }
 
-                    // sprint button (hidden while sailing)
-                    if !viewModel.player.isSailing {
-                        SprintButtonView(isSprinting: $viewModel.player.isSprinting)
+                        // middle column: block, sprint
+                        VStack(spacing: Theme.Spacing.mdl) {
+                            BlockButtonView(
+                                canBlock: viewModel.canBlock,
+                                isBlocking: viewModel.player.isBlocking,
+                                cooldownProgress: viewModel.player.blockCooldownTimer / Player.blockCooldown,
+                                onPress: { viewModel.startBlock() },
+                                onRelease: { viewModel.endBlock() }
+                            )
+                            SprintButtonView(isSprinting: $viewModel.player.isSprinting)
+                        }
+
+                        // right column: tool with charge support
+                        VStack(spacing: Theme.Spacing.mdl) {
+                            ChargeableToolButtonView(
+                                equippedTool: viewModel.player.equippedTool,
+                                canUseTool: viewModel.canUseTool,
+                                canCharge: viewModel.canCharge,
+                                isCharging: viewModel.player.isCharging,
+                                onTap: { viewModel.useTool() },
+                                onLongPress: { viewModel.openToolMenu() },
+                                onChargeStart: { viewModel.startCharge() },
+                                onChargeRelease: { viewModel.releaseCharge() }
+                            )
+                        }
                     }
+                    .padding(.trailing, safeRight + rightBuffer)
+                    .padding(.bottom, safeBottom + buffer)
                 }
-                .padding(.trailing, safeRight + rightBuffer)
-                .padding(.bottom, safeBottom + buffer)
+            }
+        }
+    }
+}
+
+struct SpellButton: View {
+    let spell: SpellType
+    let isEquipped: Bool
+    let cooldownProgress: CGFloat
+    let canAfford: Bool
+    let isDisabled: Bool
+    let onTap: () -> Void
+
+    private var isUsable: Bool {
+        !isDisabled && canAfford && cooldownProgress == 0
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(isEquipped ? Theme.Color.magic : Theme.Color.buttonBackground)
+                .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
+
+            Image(systemName: spell.iconName)
+                .font(.system(size: Theme.Size.iconMedium))
+                .foregroundColor(Theme.Color.textPrimary)
+                .opacity(isUsable ? 1.0 : 0.5)
+
+            if cooldownProgress > 0 {
+                CooldownSweepView(progress: cooldownProgress)
+                    .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
+            }
+
+            if !canAfford && cooldownProgress == 0 {
+                Circle()
+                    .fill(Color.black.opacity(0.4))
+                    .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
+            }
+        }
+        .frame(width: Theme.Size.circleButton, height: Theme.Size.circleButton)
+        .contentShape(Circle())
+        .onTapGesture {
+            if isUsable {
+                onTap()
             }
         }
     }
